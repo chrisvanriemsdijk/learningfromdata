@@ -123,6 +123,7 @@ def setup_df():
     return pd.DataFrame(
         {
             "classifier": [],
+            "hyperparameters": [],
             "vectorizer": [],
             "accuracy": [],
             "books_p": [],
@@ -149,7 +150,7 @@ def setup_df():
 
 def run_experiments(classifiers, vec, X_train, Y_train, X_test, Y_test):
     results = []
-    for name, classifier in classifiers:
+    for name, (classifier, hyperparameters) in classifiers:
         pipeline = Pipeline([("vec", vec), ("cls", classifier)])
 
         # TODO: comment this
@@ -173,7 +174,8 @@ def run_experiments(classifiers, vec, X_train, Y_train, X_test, Y_test):
         results.append(
             [
                 name,
-                "vec",
+                hyperparameters,
+                vec.__class__,
                 acc,
                 b_p,
                 b_r,
@@ -217,7 +219,7 @@ if __name__ == "__main__":
     classifiers = []
     if args.naive_bayes:
         classifiers = [
-            ("Multinomial NB", MultinomialNB()),
+            ("Multinomial NB", (MultinomialNB(), "Nothing")),
         ]
     if args.k_nearest_neighbour:
         classifiers = []
