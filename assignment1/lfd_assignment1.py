@@ -71,6 +71,12 @@ def create_arg_parser():
         action="store_true",
         help="Use the DT pipeline",
     )
+    parser.add_argument(
+        "-RF",
+        "--random_forest",
+        action = "store_true",
+        help = "Use the RF pipeline"
+    )
     args = parser.parse_args()
     return args
 
@@ -264,6 +270,16 @@ if __name__ == "__main__":
             ("Decision Tree Entorpy + Best", DecisionTreeClassifier(criterion="entropy")),
             ("Decision Tree Gini + Random", DecisionTreeClassifier(criterion="gini", splitter="random")),
             ("Decision Tree Gini + Best", DecisionTreeClassifier(criterion="gini"))
+        ]
+    
+    if args.random_forest:
+        name = "rf"
+        if args.tfidf:
+            name += "_tfidf"
+        classifiers = [
+            ("Random Forest Gini ", RandomForestClassifier(criterion= "gini"))
+            ("Random Forest Entropy", RandomForestClassifier(criterion= "entropy"))
+            ("Random Forest Log Loss", RandomForestClassifier(criterion= "log_loss") )
         ]
 
     # Combine the vectorizer with a Naive Bayes classifier
