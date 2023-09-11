@@ -6,7 +6,12 @@ import argparse
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import (
+    accuracy_score,
+    f1_score,
+    precision_score,
+    classification_report,
+)
 
 
 def create_arg_parser():
@@ -92,4 +97,7 @@ if __name__ == "__main__":
 
     # TODO: comment this
     acc = accuracy_score(Y_test, Y_pred)
-    print(f"Final accuracy: {acc}")
+    f1 = f1_score(Y_test, Y_pred, average="weighted")
+    precision = precision_score(Y_test, Y_pred, average="weighted")
+    print(classification_report(Y_test, Y_pred))
+    print(f"Final accuracy: {acc}, F1: {f1}, precision: {precision}")
