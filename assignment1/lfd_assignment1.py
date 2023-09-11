@@ -2,16 +2,22 @@
 
 """TODO: add high-level description of this Python script"""
 
+# Import seaborn
+import seaborn as sns
+
+# Apply the default theme
 import argparse
+import matplotlib.pyplot as plt
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
-from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import (
     accuracy_score,
-    f1_score,
-    precision_score,
     classification_report,
+    confusion_matrix,
+    ConfusionMatrixDisplay,
 )
+
+sns.set_theme()
 
 
 def create_arg_parser():
@@ -42,6 +48,24 @@ def create_arg_parser():
         action="store_true",
         help="Use the TF-IDF vectorizer instead of CountVectorizer",
     )
+    parser.add_argument(
+        "-nb",
+        "--naive_bayes",
+        action="store_true",
+        help="Use the NB pipeline",
+    )
+    parser.add_argument(
+        "-knn",
+        "--k_nearest_neighbour",
+        action="store_true",
+        help="Use the KNN pipeline",
+    )
+    parser.add_argument(
+        "-SVM",
+        "--support_vector_machine",
+        action="store_true",
+        help="Use the SVM pipeline",
+    )
     args = parser.parse_args()
     return args
 
@@ -68,6 +92,19 @@ def identity(inp):
     return inp
 
 
+def check_balance(y):
+    data = {}
+    for label in y:
+        if not data.get(label):
+            data[label] = 1
+        data[label] += 1
+    labels = data.keys()
+    values = data.values()
+    plt.bar(labels, values)
+    print(data)
+    plt.show()
+
+
 if __name__ == "__main__":
     args = create_arg_parser()
 
@@ -84,20 +121,28 @@ if __name__ == "__main__":
         # Bag of Words vectorizer
         vec = CountVectorizer(preprocessor=identity, tokenizer=identity)
 
+    classifiers = []
+    if args.knn:
+        classifiers = []
     # Combine the vectorizer with a Naive Bayes classifier
     # Of course you have to experiment with different classifiers
     # You can all find them through the sklearn library
-    classifier = Pipeline([("vec", vec), ("cls", MultinomialNB())])
+    for cls in classifiers:
+        classifier = Pipeline([("vec", vec), ("cls", cls)])
 
-    # TODO: comment this
-    classifier.fit(X_train, Y_train)
+        # TODO: comment this
+        classifier.fit(X_train, Y_train)
 
-    # TODO: comment this
-    Y_pred = classifier.predict(X_test)
+        # TODO: comment this
+        Y_pred = classifier.predict(X_test)
 
-    # TODO: comment this
-    acc = accuracy_score(Y_test, Y_pred)
-    f1 = f1_score(Y_test, Y_pred, average="weighted")
-    precision = precision_score(Y_test, Y_pred, average="weighted")
-    print(classification_report(Y_test, Y_pred))
-    print(f"Final accuracy: {acc}, F1: {f1}, precision: {precision}")
+        # TODO: comment this
+        acc = accuracy_score(Y_test, Y_pred)
+        cm = confusion_matrix(Y_test, Y_pred)
+        print(classification_report(Y_test, Y_pred))
+        print(f"Final accuracy: {acc}")
+        disp = ConfusionMatrixDisplay(
+            confusion_matrix=cm, display_labels=classifier.classes_
+        )
+        disp.plot()
+        plt.show()
