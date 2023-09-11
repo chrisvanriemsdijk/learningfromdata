@@ -277,9 +277,9 @@ if __name__ == "__main__":
         if args.tfidf:
             name += "_tfidf"
         classifiers = [
-            ("Random Forest Gini ", RandomForestClassifier(criterion= "gini"))
-            ("Random Forest Entropy", RandomForestClassifier(criterion= "entropy"))
-            ("Random Forest Log Loss", RandomForestClassifier(criterion= "log_loss") )
+            ("Random Forest Gini ", RandomForestClassifier(criterion= "gini")),
+            ("Random Forest Entropy", RandomForestClassifier(criterion= "entropy")),
+            ("Random Forest Log Loss", RandomForestClassifier(criterion= "log_loss")),
         ]
 
     # Combine the vectorizer with a Naive Bayes classifier
