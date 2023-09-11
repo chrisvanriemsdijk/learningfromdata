@@ -12,7 +12,9 @@ from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.metrics import (ConfusionMatrixDisplay, accuracy_score,
                              classification_report, confusion_matrix)
 from sklearn.naive_bayes import MultinomialNB
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import Pipeline
+from sklearn.svm import SVC, LinearSVC
 
 
 def create_arg_parser():
@@ -119,7 +121,6 @@ def setup_df():
     return pd.DataFrame(
         {
             "classifier": [],
-            "hyperparameters": [],
             "vectorizer": [],
             "accuracy": [],
             "books_p": [],
@@ -144,9 +145,9 @@ def setup_df():
     )
 
 
-def run_experiments(classifiers, vec, X_train, Y_train, X_test, Y_test):
+def run_experiments(classifiers, vec, vec_name, X_train, Y_train, X_test, Y_test):
     results = []
-    for name, (classifier, hyperparameters) in classifiers:
+    for name, classifier in classifiers:
         pipeline = Pipeline([("vec", vec), ("cls", classifier)])
 
         # TODO: comment this
@@ -170,8 +171,7 @@ def run_experiments(classifiers, vec, X_train, Y_train, X_test, Y_test):
         results.append(
             [
                 name,
-                hyperparameters,
-                vec.__class__,
+                vec_name,
                 acc,
                 b_p,
                 b_r,
@@ -207,29 +207,51 @@ if __name__ == "__main__":
     # We use a dummy function as tokenizer and preprocessor,
     # since the texts are already preprocessed and tokenized.
     if args.tfidf:
+        vec_name = "TF-IDF"
         vec = TfidfVectorizer(preprocessor=identity, tokenizer=identity)
     else:
         # Bag of Words vectorizer
+        vec_name = "Bag of words"
         vec = CountVectorizer(preprocessor=identity, tokenizer=identity)
 
     classifiers = []
     if args.naive_bayes:
         name = "nb"
+        if args.tfidf:
+            name += "_tfidf"
         classifiers = [
-            ("Multinomial NB", (MultinomialNB(), "Nothing")),
+            ("Multinomial NB", MultinomialNB()),
         ]
     if args.k_nearest_neighbour:
         name = "knn"
-        classifiers = []
+        if args.tfidf:
+            name += "_tfidf"
+        classifiers = [
+            ("KNN 3", KNeighborsClassifier(3)),
+            ("KNN 5", KNeighborsClassifier()),
+            ("KNN 8", KNeighborsClassifier(8)),
+            ("KNN 3 Weighted", KNeighborsClassifier(3, weights="distance")),
+            ("KNN 5 Weighted", KNeighborsClassifier(weights="distance")),
+            ("KNN 8 Weighted", KNeighborsClassifier(8,weights="distance")),
+        ]
     if args.support_vector_machine:
         name = "svm"
-        classifiers = []
+        if args.tfidf:
+            name += "_tfidf"
+        classifiers = [
+            ("LinearSVM C = 1", LinearSVC()),
+            ("LinearSVM C = 0.5", LinearSVC(C=0.5)),
+            ("LinearSVM C = 1.5", LinearSVC(C=1.5, dual='auto')),
+            ("SVC C=1", SVC()),
+            ("SVC C=0.5", SVC(C=0.5)),
+            ("SVC C=1.5", SVC(C=1.5)),
+        ]
 
     # Combine the vectorizer with a Naive Bayes classifier
     # Of course you have to experiment with different classifiers
     # You can all find them through the sklearn library
     df = setup_df()
-    results = run_experiments(classifiers, vec, X_train, Y_train, X_test, Y_test)
+    results = run_experiments(classifiers, vec, vec_name, X_train, Y_train, X_test, Y_test)
     df_extended = pd.DataFrame(results, columns=df.columns)
     df = pd.concat([df, df_extended])
     df.to_excel(f"results/{name}.xlsx")
