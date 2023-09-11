@@ -15,6 +15,8 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.svm import SVC, LinearSVC
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
 
 
 def create_arg_parser():
@@ -62,6 +64,12 @@ def create_arg_parser():
         "--support_vector_machine",
         action="store_true",
         help="Use the SVM pipeline",
+    )
+    parser.add_argument(
+        "-DT",
+        "--decision_trees",
+        action="store_true",
+        help="Use the DT pipeline",
     )
     args = parser.parse_args()
     return args
@@ -245,6 +253,17 @@ if __name__ == "__main__":
             ("SVC C=1", SVC()),
             ("SVC C=0.5", SVC(C=0.5)),
             ("SVC C=1.5", SVC(C=1.5)),
+        ]
+    
+    if args.decision_trees:
+        name = "dt"
+        if args.tfidf:
+            name += "_tfidf"
+        classifiers = [
+            ("Decision Tree Entropy + Random", DecisionTreeClassifier(criterion="entropy", splitter="random")),
+            ("Decision Tree Entorpy + Best", DecisionTreeClassifier(criterion="entropy")),
+            ("Decision Tree Gini + Random", DecisionTreeClassifier(criterion="gini", splitter="random")),
+            ("Decision Tree Gini + Best", DecisionTreeClassifier(criterion="gini"))
         ]
 
     # Combine the vectorizer with a Naive Bayes classifier
