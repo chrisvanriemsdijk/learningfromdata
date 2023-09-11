@@ -48,6 +48,20 @@ def create_arg_parser():
         help="Use the TF-IDF vectorizer instead of CountVectorizer",
     )
     parser.add_argument(
+        "-rs",
+        "--rangestart",
+        default=1,
+        type=int,
+        help="Start of the n-gram range",
+    )
+    parser.add_argument(
+        "-rs",
+        "--rangeend",
+        default=1,
+        type=int,
+        help="End of the n-gram range",
+    )
+    parser.add_argument(
         "-nb",
         "--naive_bayes",
         action="store_true",
@@ -222,11 +236,11 @@ if __name__ == "__main__":
     # since the texts are already preprocessed and tokenized.
     if args.tfidf:
         vec_name = "TF-IDF"
-        vec = TfidfVectorizer(preprocessor=identity, tokenizer=identity)
+        vec = TfidfVectorizer(preprocessor=identity, tokenizer=identity, ngram_range=(args.rangestart, args.rangeend))
     else:
         # Bag of Words vectorizer
         vec_name = "Bag of words"
-        vec = CountVectorizer(preprocessor=identity, tokenizer=identity)
+        vec = CountVectorizer(preprocessor=identity, tokenizer=identity, ngram_range=(args.rangestart, args.rangeend))
 
     classifiers = []
     if args.naive_bayes:
