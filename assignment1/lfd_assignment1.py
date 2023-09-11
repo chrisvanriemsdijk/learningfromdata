@@ -5,16 +5,18 @@
 
 # Apply the default theme
 import argparse
+
 import matplotlib.pyplot as plt
+import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.pipeline import Pipeline
 from sklearn.metrics import (
+    ConfusionMatrixDisplay,
     accuracy_score,
     classification_report,
     confusion_matrix,
-    ConfusionMatrixDisplay,
 )
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.pipeline import Pipeline
 
 
 def create_arg_parser():
@@ -102,6 +104,100 @@ def check_balance(y):
     plt.show()
 
 
+def get_scores(key: str, report_dict):
+    dict_values = report_dict[key]
+    return dict_values.values()
+
+
+def save_confusion_matrix(Y_test, Y_pred, classifier, name):
+    cm = confusion_matrix(Y_test, Y_pred)
+    disp = ConfusionMatrixDisplay(
+        confusion_matrix=cm, display_labels=classifier.classes_
+    )
+    disp.plot()
+    disp.ax_.set_title(name)
+    disp.figure_.savefig(f"cm/{name}.png", dpi=300)
+
+
+def setup_df():
+    return pd.DataFrame(
+        {
+            "classifier": [],
+            "vectorizer": [],
+            "accuracy": [],
+            "books_p": [],
+            "books_r": [],
+            "books_f1": [],
+            "camera_p": [],
+            "camera_r": [],
+            "camera_f1": [],
+            "dvd_p": [],
+            "dvd_r": [],
+            "dvd_f1": [],
+            "health_p": [],
+            "health_r": [],
+            "health_f1": [],
+            "music_p": [],
+            "music_r": [],
+            "music_f1": [],
+            "software_p": [],
+            "software_r": [],
+            "software_f1": [],
+        }
+    )
+
+
+def run_experiments(classifiers, vec, X_train, Y_train, X_test, Y_test):
+    results = []
+    for name, classifier in classifiers:
+        pipeline = Pipeline([("vec", vec), ("cls", classifier)])
+
+        # TODO: comment this
+        pipeline.fit(X_train, Y_train)
+
+        # TODO: comment this
+        Y_pred = pipeline.predict(X_test)
+
+        # TODO: comment this
+        acc = accuracy_score(Y_test, Y_pred)
+        report_dict = classification_report(Y_test, Y_pred, output_dict=True)
+        save_confusion_matrix(Y_test, Y_pred, classifier, name)
+        b_p, b_r, b_f1, _ = get_scores("books", report_dict)
+        c_p, c_r, c_f1, _ = get_scores("camera", report_dict)
+        d_p, d_r, d_f1, _ = get_scores("dvd", report_dict)
+        h_p, h_r, h_f1, _ = get_scores("health", report_dict)
+        m_p, m_r, m_f1, _ = get_scores("music", report_dict)
+        s_p, s_r, s_f1, _ = get_scores("software", report_dict)
+
+        # TODO ADD vectorizer name
+        results.append(
+            [
+                name,
+                "vec",
+                acc,
+                b_p,
+                b_r,
+                b_f1,
+                c_p,
+                c_r,
+                c_f1,
+                d_p,
+                d_r,
+                d_f1,
+                h_p,
+                h_r,
+                h_f1,
+                m_p,
+                m_r,
+                m_f1,
+                s_p,
+                s_r,
+                s_f1,
+            ]
+        )
+    return results
+
+
 if __name__ == "__main__":
     args = create_arg_parser()
 
@@ -131,23 +227,8 @@ if __name__ == "__main__":
     # Combine the vectorizer with a Naive Bayes classifier
     # Of course you have to experiment with different classifiers
     # You can all find them through the sklearn library
-    for name, classifier in classifiers:
-        pipeline = Pipeline([("vec", vec), ("cls", classifier)])
-
-        # TODO: comment this
-        pipeline.fit(X_train, Y_train)
-
-        # TODO: comment this
-        Y_pred = pipeline.predict(X_test)
-
-        # TODO: comment this
-        acc = accuracy_score(Y_test, Y_pred)
-        cm = confusion_matrix(Y_test, Y_pred)
-        print(classification_report(Y_test, Y_pred))
-        print(f"Final accuracy: {acc}")
-        disp = ConfusionMatrixDisplay(
-            confusion_matrix=cm, display_labels=classifier.classes_
-        )
-        disp.plot()
-        disp.ax_.set_title(name)
-        plt.show()
+    df = setup_df()
+    results = run_experiments(classifiers, vec, X_train, Y_train, X_test, Y_test)
+    df_extended = pd.DataFrame(results, columns=df.columns)
+    df = pd.concat([df, df_extended])
+    df.to_excel("test.xlsx")
