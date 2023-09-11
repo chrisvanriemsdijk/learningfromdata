@@ -2,13 +2,12 @@
 
 """TODO: add high-level description of this Python script"""
 
-# Import seaborn
-import seaborn as sns
 
 # Apply the default theme
 import argparse
 import matplotlib.pyplot as plt
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import (
     accuracy_score,
@@ -16,8 +15,6 @@ from sklearn.metrics import (
     confusion_matrix,
     ConfusionMatrixDisplay,
 )
-
-sns.set_theme()
 
 
 def create_arg_parser():
@@ -122,19 +119,26 @@ if __name__ == "__main__":
         vec = CountVectorizer(preprocessor=identity, tokenizer=identity)
 
     classifiers = []
-    if args.knn:
+    if args.naive_bayes:
+        classifiers = [
+            ("Multinomial NB", MultinomialNB()),
+        ]
+    if args.k_nearest_neighbour:
         classifiers = []
+    if args.support_vector_machine:
+        classifiers = []
+
     # Combine the vectorizer with a Naive Bayes classifier
     # Of course you have to experiment with different classifiers
     # You can all find them through the sklearn library
-    for cls in classifiers:
-        classifier = Pipeline([("vec", vec), ("cls", cls)])
+    for name, classifier in classifiers:
+        pipeline = Pipeline([("vec", vec), ("cls", classifier)])
 
         # TODO: comment this
-        classifier.fit(X_train, Y_train)
+        pipeline.fit(X_train, Y_train)
 
         # TODO: comment this
-        Y_pred = classifier.predict(X_test)
+        Y_pred = pipeline.predict(X_test)
 
         # TODO: comment this
         acc = accuracy_score(Y_test, Y_pred)
@@ -145,4 +149,5 @@ if __name__ == "__main__":
             confusion_matrix=cm, display_labels=classifier.classes_
         )
         disp.plot()
+        disp.ax_.set_title(name)
         plt.show()
