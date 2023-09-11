@@ -9,12 +9,8 @@ import argparse
 import matplotlib.pyplot as plt
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
-from sklearn.metrics import (
-    ConfusionMatrixDisplay,
-    accuracy_score,
-    classification_report,
-    confusion_matrix,
-)
+from sklearn.metrics import (ConfusionMatrixDisplay, accuracy_score,
+                             classification_report, confusion_matrix)
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline
 
@@ -218,12 +214,15 @@ if __name__ == "__main__":
 
     classifiers = []
     if args.naive_bayes:
+        name = "nb"
         classifiers = [
             ("Multinomial NB", (MultinomialNB(), "Nothing")),
         ]
     if args.k_nearest_neighbour:
+        name = "knn"
         classifiers = []
     if args.support_vector_machine:
+        name = "svm"
         classifiers = []
 
     # Combine the vectorizer with a Naive Bayes classifier
@@ -233,4 +232,4 @@ if __name__ == "__main__":
     results = run_experiments(classifiers, vec, X_train, Y_train, X_test, Y_test)
     df_extended = pd.DataFrame(results, columns=df.columns)
     df = pd.concat([df, df_extended])
-    df.to_excel("test.xlsx")
+    df.to_excel(f"results/{name}.xlsx")
