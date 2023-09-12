@@ -6,6 +6,7 @@
 # Apply the default theme
 import argparse
 
+import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
@@ -17,7 +18,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.svm import SVC, LinearSVC
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
-
+from empath import Empath
 
 def create_arg_parser():
     parser = argparse.ArgumentParser()
@@ -55,7 +56,7 @@ def create_arg_parser():
         help="Start of the n-gram range",
     )
     parser.add_argument(
-        "-rs",
+        "-re",
         "--rangeend",
         default=1,
         type=int,
@@ -90,6 +91,12 @@ def create_arg_parser():
         "--random_forest",
         action = "store_true",
         help = "Use the RF pipeline"
+    )
+    parser.add_argument(
+        "-WC",
+        "--word_count",
+        action = "store_true",
+        help = "Use word count as a feature"
     )
     args = parser.parse_args()
     return args
@@ -144,6 +151,15 @@ def save_confusion_matrix(Y_test, Y_pred, classifier, name):
     disp.ax_.set_title(name)
     disp.figure_.savefig(f"cm/{name}.png", dpi=300)
 
+def add_word_count(x):
+    lexicon = Empath()
+    n = []
+    for i in x:
+        add = lexicon.analyze(i, normalize=True).values()
+        add = list(add)
+        add = np.array(add)
+        n.append(add)
+    return n
 
 def setup_df():
     return pd.DataFrame(
@@ -176,7 +192,10 @@ def setup_df():
 def run_experiments(classifiers, vec, vec_name, X_train, Y_train, X_test, Y_test):
     results = []
     for name, classifier in classifiers:
-        pipeline = Pipeline([("vec", vec), ("cls", classifier)])
+        if args.word_count:
+            pipeline = Pipeline([("cls", classifier)])
+        else:
+            pipeline = Pipeline([("vec", vec), ("cls", classifier)])
 
         # TODO: comment this
         pipeline.fit(X_train, Y_train)
@@ -231,76 +250,90 @@ if __name__ == "__main__":
     X_train, Y_train = read_corpus(args.train_file, args.sentiment)
     X_test, Y_test = read_corpus(args.dev_file, args.sentiment)
 
+    if args.word_count:
+        X_train = add_word_count(X_train)
+        X_test = add_word_count(X_test) 
+
     # Convert the texts to vectors
     # We use a dummy function as tokenizer and preprocessor,
     # since the texts are already preprocessed and tokenized.
-    if args.tfidf:
-        vec_name = "TF-IDF"
-        vec = TfidfVectorizer(preprocessor=identity, tokenizer=identity, ngram_range=(args.rangestart, args.rangeend))
-    else:
-        # Bag of Words vectorizer
-        vec_name = "Bag of words"
-        vec = CountVectorizer(preprocessor=identity, tokenizer=identity, ngram_range=(args.rangestart, args.rangeend))
+    rangestart = args.rangestart
+    rangeend = rangestart
+    while(rangestart <= args.rangeend):
+        print(f'Running n_gram range {rangestart} -> {rangeend}')
 
-    classifiers = []
-    if args.naive_bayes:
-        name = "nb"
         if args.tfidf:
-            name += "_tfidf"
-        classifiers = [
-            ("Multinomial NB", MultinomialNB()),
-        ]
-    if args.k_nearest_neighbour:
-        name = "knn"
-        if args.tfidf:
-            name += "_tfidf"
-        classifiers = [
-            ("KNN 3", KNeighborsClassifier(3)),
-            ("KNN 5", KNeighborsClassifier()),
-            ("KNN 8", KNeighborsClassifier(8)),
-            ("KNN 3 Weighted", KNeighborsClassifier(3, weights="distance")),
-            ("KNN 5 Weighted", KNeighborsClassifier(weights="distance")),
-            ("KNN 8 Weighted", KNeighborsClassifier(8,weights="distance")),
-        ]
-    if args.support_vector_machine:
-        name = "svm"
-        if args.tfidf:
-            name += "_tfidf"
-        classifiers = [
-            ("LinearSVM C = 1", LinearSVC()),
-            ("LinearSVM C = 0.5", LinearSVC(C=0.5)),
-            ("LinearSVM C = 1.5", LinearSVC(C=1.5, dual='auto')),
-            ("SVC C=1", SVC()),
-            ("SVC C=0.5", SVC(C=0.5)),
-            ("SVC C=1.5", SVC(C=1.5)),
-        ]
-    
-    if args.decision_trees:
-        name = "dt"
-        if args.tfidf:
-            name += "_tfidf"
-        classifiers = [
-            ("Decision Tree Entropy + Random", DecisionTreeClassifier(criterion="entropy", splitter="random")),
-            ("Decision Tree Entorpy + Best", DecisionTreeClassifier(criterion="entropy")),
-            ("Decision Tree Gini + Random", DecisionTreeClassifier(criterion="gini", splitter="random")),
-            ("Decision Tree Gini + Best", DecisionTreeClassifier(criterion="gini"))
-        ]
-    
-    if args.random_forest:
-        name = "rf"
-        if args.tfidf:
-            name += "_tfidf"
-        classifiers = [
-            ("Random Forest Gini ", RandomForestClassifier(criterion= "gini")),
-            ("Random Forest Entropy", RandomForestClassifier(criterion= "entropy")),
-            #("Random Forest Log Loss", RandomForestClassifier(criterion= "log_loss")),
-        ]
+            vec_name = "TF-IDF"
+            vec = TfidfVectorizer(preprocessor=identity, tokenizer=identity, ngram_range=(rangestart, rangeend))
+        else:
+            # Bag of Words vectorizer
+            vec_name = "Bag of words"
+            vec = CountVectorizer(preprocessor=identity, tokenizer=identity, ngram_range=(rangestart, rangeend))
 
-    # Combine the vectorizer with a Naive Bayes classifier
-    # Of course you have to experiment with different classifiers
-    # You can all find them through the sklearn library
-    df = setup_df()
-    results = run_experiments(classifiers, vec, vec_name, X_train, Y_train, X_test, Y_test)
-    df_extended = pd.DataFrame(results, columns=df.columns)
-    df = pd.concat([df, df_extended])
-    df.to_excel(f"results/{name}.xlsx")
+        classifiers = []
+        if args.naive_bayes:
+            name = "nb"
+            if args.tfidf:
+                name += "_tfidf"
+            classifiers = [
+                ("Multinomial NB", MultinomialNB()),
+            ]
+        if args.k_nearest_neighbour:
+            name = "knn"
+            if args.tfidf:
+                name += "_tfidf"
+            classifiers = [
+                ("KNN 3", KNeighborsClassifier(3)),
+                ("KNN 5", KNeighborsClassifier()),
+                ("KNN 8", KNeighborsClassifier(8)),
+                ("KNN 3 Weighted", KNeighborsClassifier(3, weights="distance")),
+                ("KNN 5 Weighted", KNeighborsClassifier(weights="distance")),
+                ("KNN 8 Weighted", KNeighborsClassifier(8,weights="distance")),
+            ]
+        if args.support_vector_machine:
+            name = "svm"
+            if args.tfidf:
+                name += "_tfidf"
+            classifiers = [
+                ("LinearSVM C = 1", LinearSVC()),
+                ("LinearSVM C = 0.5", LinearSVC(C=0.5)),
+                ("LinearSVM C = 1.5", LinearSVC(C=1.5, dual='auto')),
+                ("SVC C=1", SVC()),
+                ("SVC C=0.5", SVC(C=0.5)),
+                ("SVC C=1.5", SVC(C=1.5)),
+            ]
+        
+        if args.decision_trees:
+            name = "dt"
+            if args.tfidf:
+                name += "_tfidf"
+            classifiers = [
+                ("Decision Tree Entropy + Random", DecisionTreeClassifier(criterion="entropy", splitter="random")),
+                ("Decision Tree Entorpy + Best", DecisionTreeClassifier(criterion="entropy")),
+                ("Decision Tree Gini + Random", DecisionTreeClassifier(criterion="gini", splitter="random")),
+                ("Decision Tree Gini + Best", DecisionTreeClassifier(criterion="gini"))
+            ]
+        
+        if args.random_forest:
+            name = "rf"
+            if args.tfidf:
+                name += "_tfidf"
+            classifiers = [
+                ("Random Forest Gini ", RandomForestClassifier(criterion= "gini")),
+                ("Random Forest Entropy", RandomForestClassifier(criterion= "entropy")),
+                #("Random Forest Log Loss", RandomForestClassifier(criterion= "log_loss")),
+            ]
+
+        # Combine the vectorizer with a Naive Bayes classifier
+        # Of course you have to experiment with different classifiers
+        # You can all find them through the sklearn library
+        df = setup_df()
+        results = run_experiments(classifiers, vec, vec_name, X_train, Y_train, X_test, Y_test)
+        df_extended = pd.DataFrame(results, columns=df.columns)
+        df = pd.concat([df, df_extended])
+        df.to_excel(f"results/{name}-{rangestart}-{rangeend}.xlsx")
+
+        rangeend += 1
+        if rangeend > args.rangeend:
+            rangestart += 1
+            rangeend = rangestart
