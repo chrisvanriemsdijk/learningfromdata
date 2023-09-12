@@ -18,6 +18,8 @@ from sklearn.pipeline import Pipeline
 from sklearn.svm import SVC, LinearSVC
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.base import BaseEstimator, TransformerMixin
+from scipy.sparse import csr_matrix
 from empath import Empath
 
 def create_arg_parser():
@@ -98,6 +100,12 @@ def create_arg_parser():
         action = "store_true",
         help = "Use word count as a feature"
     )
+    parser.add_argument(
+        "-C",
+        "--correlated",
+        action = "store_true",
+        help = "Remove highly correlated features"
+    )
     args = parser.parse_args()
     return args
 
@@ -123,6 +131,32 @@ def identity(inp):
     """Dummy function that just returns the input"""
     return inp
 
+class RemoveCorrelated(BaseEstimator, TransformerMixin):
+    def fit(self, X, y=None):
+        return self
+    
+    def transform(self, X, y=None):
+        if not type(X) == list:
+            X = X.todense()
+        X = pd.DataFrame(X)
+
+        corr = X.corr().abs()
+        print('D')
+        upper = corr.where(np.triu(np.ones(corr.shape), k=1).astype(np.bool))
+        print('D')
+        to_drop = [column for column in upper.columns if any(upper[column] > 0.90)]
+        print(to_drop)
+        for i in to_drop:
+            print('Eerst')
+            print(X[i])
+            X[i] = 0
+            print('NU')
+            print(X[i])
+
+        print(type(X))
+        print(X)
+        X = csr_matrix(X.values)
+        return X
 
 def check_balance(y):
     data = {}
@@ -192,10 +226,16 @@ def setup_df():
 def run_experiments(classifiers, vec, vec_name, X_train, Y_train, X_test, Y_test):
     results = []
     for name, classifier in classifiers:
-        if args.word_count:
-            pipeline = Pipeline([("cls", classifier)])
-        else:
-            pipeline = Pipeline([("vec", vec), ("cls", classifier)])
+        pipe = []
+
+        if not args.word_count:
+            pipe.append(("vec", vec))
+        
+        if args.correlated:
+            pipe.append(("corr", RemoveCorrelated()))
+
+        pipe.append(("cls", classifier))
+        pipeline = Pipeline(pipe)
 
         # TODO: comment this
         pipeline.fit(X_train, Y_train)
