@@ -16,6 +16,7 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.svm import SVC, LinearSVC
+from sklearn.ensemble import VotingClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -95,6 +96,12 @@ def create_arg_parser():
         help = "Use the RF pipeline"
     )
     parser.add_argument(
+        "-ENS",
+        "--ensemble",
+        action = "store_true",
+        help = "Use ensemble method"
+    )
+    parser.add_argument(
         "-WC",
         "--word_count",
         action = "store_true",
@@ -141,16 +148,12 @@ class RemoveCorrelated(BaseEstimator, TransformerMixin):
         X = pd.DataFrame(X)
 
         corr = X.corr().abs()
-        print('D')
         upper = corr.where(np.triu(np.ones(corr.shape), k=1).astype(np.bool))
-        print('D')
         to_drop = [column for column in upper.columns if any(upper[column] > 0.90)]
         print(to_drop)
         for i in to_drop:
-            print('Eerst')
             print(X[i])
             X[i] = 0
-            print('NU')
             print(X[i])
 
         print(type(X))
@@ -337,7 +340,7 @@ if __name__ == "__main__":
             classifiers = [
                 ("LinearSVM C = 1", LinearSVC()),
                 ("LinearSVM C = 0.5", LinearSVC(C=0.5)),
-                ("LinearSVM C = 1.5", LinearSVC(C=1.5, dual='auto')),
+                ("LinearSVM C = 1.5", LinearSVC(C=1.5)),
                 ("SVC C=1", SVC()),
                 ("SVC C=0.5", SVC(C=0.5)),
                 ("SVC C=1.5", SVC(C=1.5)),
@@ -362,6 +365,15 @@ if __name__ == "__main__":
                 ("Random Forest Gini ", RandomForestClassifier(criterion= "gini")),
                 ("Random Forest Entropy", RandomForestClassifier(criterion= "entropy")),
                 #("Random Forest Log Loss", RandomForestClassifier(criterion= "log_loss")),
+            ]
+        
+        if args.ensemble:
+            name = "ens"
+            if args.tfidf:
+                name += "_tfidf"
+            estimators=[("knn8w", KNeighborsClassifier(8,weights="distance")), ("rf", RandomForestClassifier(criterion= "gini")), ("svm", LinearSVC()) ]
+            classifiers = [
+                ("Ensemble method", VotingClassifier(estimators, voting="hard"))
             ]
 
         # Combine the vectorizer with a Naive Bayes classifier
