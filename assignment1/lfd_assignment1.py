@@ -180,6 +180,7 @@ def identity_string(inp):
 
 
 class RemoveCorrelated(BaseEstimator, TransformerMixin):
+    #TODO: Comment
     def fit(self, X, y=None):
         return self
 
@@ -325,6 +326,10 @@ def run_experiments(classifiers, vec, vec_name, X_train, Y_train, X_test, Y_test
         macro_f1 = f1_score(Y_test, Y_pred, average="macro")
         report_dict = classification_report(Y_test, Y_pred, output_dict=True)
         print(classification_report(Y_test, Y_pred))
+        for x_test, y_test, y_pred in zip(X_test, Y_test, Y_pred):
+            if y_test != y_pred:
+                print("MISSCLASSIFIED")
+                print(" ".join(x_test), y_test, y_pred)
         save_confusion_matrix(Y_test, Y_pred, classifier, name)
         b_p, b_r, b_f1, _ = get_scores("books", report_dict)
         c_p, c_r, c_f1, _ = get_scores("camera", report_dict)
@@ -472,9 +477,9 @@ if __name__ == "__main__":
         if args.k_nearest_neighbour:
             name = "knn"
             classifiers = [
+                ("KNN 8", KNeighborsClassifier(8)),
                 ("KNN 3", KNeighborsClassifier(3)),
                 ("KNN 5", KNeighborsClassifier()),
-                ("KNN 8", KNeighborsClassifier(8)),
                 ("KNN 3 Weighted", KNeighborsClassifier(3, weights="distance")),
                 ("KNN 5 Weighted", KNeighborsClassifier(weights="distance")),
                 ("KNN 8 Weighted", KNeighborsClassifier(8, weights="distance")),
@@ -483,8 +488,8 @@ if __name__ == "__main__":
         if args.support_vector_machine:
             name = "svm"
             classifiers = [
-                ("LinearSVM C = 1", LinearSVC()),
                 ("LinearSVM C = 0.5", LinearSVC(C=0.5)),
+                ("LinearSVM C = 1", LinearSVC()),
                 ("LinearSVM C = 1.5", LinearSVC(C=1.5)),
                 ("LinearSVM C = 0.75", LinearSVC(C=0.75)),
                 ("LinearSVM C = 1.25", LinearSVC(C=1.25)),
@@ -501,6 +506,10 @@ if __name__ == "__main__":
             name = "dt"
             classifiers = [
                 (
+                    "Decision Tree Gini + Random",
+                    DecisionTreeClassifier(criterion="gini", splitter="random"),
+                ),
+                (
                     "Decision Tree Entropy + Random",
                     DecisionTreeClassifier(criterion="entropy", splitter="random"),
                 ),
@@ -508,10 +517,7 @@ if __name__ == "__main__":
                     "Decision Tree Entorpy + Best",
                     DecisionTreeClassifier(criterion="entropy"),
                 ),
-                (
-                    "Decision Tree Gini + Random",
-                    DecisionTreeClassifier(criterion="gini", splitter="random"),
-                ),
+
                 ("Decision Tree Gini + Best", DecisionTreeClassifier(criterion="gini")),
             ]
 
@@ -562,7 +568,7 @@ if __name__ == "__main__":
         if not os.path.exists(args.result_dir):
             os.makedirs(args.result_dir)
         df.to_excel(
-            f"{args.result_dir}/{name}-{vec_name}-{features}-{rangestart}-{rangeend}.xlsx"
+            f"{args.result_dir}/test-{name}-{vec_name}-{features}-{rangestart}-{rangeend}.xlsx"
         )
 
         # TODO: Add comment
