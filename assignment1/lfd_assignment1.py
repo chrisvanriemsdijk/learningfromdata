@@ -1,7 +1,26 @@
 #!/usr/bin/env python
 
-"""TODO: add high-level description of this Python script"""
+"""
+This python script was used for the research paper: Exploring Classifiers for Automated Review Topic Detection
 
+It enables the user to run experiments on the pre-defined experiments and saves the confusion matrices and results.
+
+To use this script create a virtual environment or a Conda environment and install the necesarry packages with the
+following command:
+`pip install -r requirements.txt`
+
+Also run the following command:
+`python -m spacy download en_core_web_sm`
+
+This script uses argparse, you can get all the necessary settings with:
+`python lfd_assignment1.py --help`
+
+To run our best model on the test set run the following command:
+python3 lfd_assignment1.py -svm -dir results -rs 1 -re 1 -t -l -st -test test.txt
+
+This uses the SVM experiments with the save directory set to results, range start and end of 1, lemmatizing, stemming,
+and using the test file.
+"""
 
 # Apply the default theme
 import argparse
@@ -21,7 +40,6 @@ from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.metrics import (ConfusionMatrixDisplay, accuracy_score,
                              classification_report, confusion_matrix, f1_score,
                              precision_score, recall_score)
-from sklearn.model_selection import GridSearchCV
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import FeatureUnion, Pipeline
@@ -32,6 +50,10 @@ nlp = spacy.load("en_core_web_sm")
 
 
 def create_arg_parser():
+    """
+    Creates the argument parser with all the arguments and parses the user's input when calling the script
+    @return: parsed args
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-tf",
@@ -148,13 +170,17 @@ def create_arg_parser():
         help="Combined features with BOW, POS and TF-IDF",
     )
     parser.add_argument("-st", "--stem", action="store_true", help="Store input")
-    parser.add_argument("-b", "--best", action="store_true", help="Run the best model")
     args = parser.parse_args()
     return args
 
 
 def read_corpus(corpus_file, use_sentiment):
-    """TODO: add function description"""
+    """
+    Read the file by the given file name and parse the necesarry fields. Can use the sentiment or topic classes
+    @param corpus_file: File name of the corpus_file
+    @param use_sentiment: Whether to use sentiment (2-class) or topics (6-class)
+    @return:
+    """
     documents = []
     labels = []
     with open(corpus_file, encoding="utf-8") as in_file:
@@ -176,11 +202,17 @@ def identity(inp):
 
 
 def identity_string(inp):
+    """
+    SpaCy can only extract the POS tags of words and not lists, therefore we need to use this function
+    that joins the whole input.
+    @param inp: List of words
+    @return: Concatenated string of words with spaces.
+    """
     return " ".join(inp)
 
 
 class RemoveCorrelated(BaseEstimator, TransformerMixin):
-    #TODO: Comment
+    # TODO: Comment
     def fit(self, X, y=None):
         return self
 
@@ -205,10 +237,19 @@ class RemoveCorrelated(BaseEstimator, TransformerMixin):
 
 
 def spacy_pos(txt):
+    """
+    Return the SpaCy POS tag per token
+    @param txt: Concatenated string of words
+    @return: list: POS tag of each word from `txt`
+    """
     return [token.pos_ for token in nlp(txt)]
 
 
 def check_balance(y):
+    """
+    Chech the (im)balance of the dataset by plotting each label
+    @param y: the topics
+    """
     data = {}
     for label in y:
         if not data.get(label):
@@ -217,16 +258,28 @@ def check_balance(y):
     labels = data.keys()
     values = data.values()
     plt.bar(labels, values)
-    print(data)
     plt.show()
 
 
 def get_scores(key: str, report_dict):
+    """
+    Get the scores of each topic from the classification report dictionary
+    @param key: the key like "camera" or "dvd"
+    @param report_dict: The classification report dictionary
+    @return: The values of the classification report dictionary of the given key
+    """
     dict_values = report_dict[key]
     return dict_values.values()
 
 
 def save_confusion_matrix(Y_test, Y_pred, classifier, name):
+    """
+    Save the confusion matrix of the specified classifier
+    @param Y_test: The ground-truth Y-values
+    @param Y_pred: Predicted Y-values
+    @param classifier: Classifier used to get the classes
+    @param name: Name of the classifier
+    """
     cm = confusion_matrix(Y_test, Y_pred)
     disp = ConfusionMatrixDisplay(
         confusion_matrix=cm, display_labels=classifier.classes_
@@ -240,6 +293,11 @@ def save_confusion_matrix(Y_test, Y_pred, classifier, name):
 
 
 def add_word_count(x):
+    """
+    Function to add word count to the input
+    @param x: Features
+    @return: Word count of the features
+    """
     lexicon = Empath()
     n = []
     for i in x:
@@ -251,6 +309,11 @@ def add_word_count(x):
 
 
 def lemmatize(x):
+    """
+    Lemmatizes the input, goes over each word in each data sample and lemmatizes the word
+    @param x: Data samples
+    @return: Lemmatized data samples
+    """
     lemmatizer = WordNetLemmatizer()
     new_docs = []
     for doc in x:
@@ -259,6 +322,11 @@ def lemmatize(x):
 
 
 def stem(x):
+    """
+    Stems the input, goes over each word in each data sample and stems the word
+    @param x: Data samples
+    @return: Stemmed data samples
+    """
     stemmer = SnowballStemmer("english")
     new_docs = []
     for doc in x:
@@ -267,6 +335,11 @@ def stem(x):
 
 
 def setup_df():
+    """
+    To save the results we used Pandas, we first need to set up the dataset.
+    Therefore, we need to create the columns first.
+    @return: Empty DataFrame with columns.
+    """
     return pd.DataFrame(
         {
             "classifier": [],
@@ -298,7 +371,18 @@ def setup_df():
 
 
 def run_experiments(classifiers, vec, vec_name, X_train, Y_train, X_test, Y_test):
-    # TODO Add function description
+    """
+    Main function to run all the classifiers with a given vectorizer, vectorizer name, and input/output.
+    @param classifiers: List of classifiers to use
+    @param vec: Vectorizer to use
+    @param vec_name: Vectorizer name for saving in the DataFrame
+    @param X_train: Train features
+    @param Y_train: Train Feature labels
+    @param X_test: Test features
+    @param Y_test: Test feature labels
+    @return: list of results
+    """
+
     results = []
     for name, classifier in classifiers:
         pipe = []
@@ -312,25 +396,32 @@ def run_experiments(classifiers, vec, vec_name, X_train, Y_train, X_test, Y_test
         pipe.append(("cls", classifier))
         pipeline = Pipeline(pipe)
 
-        # TODO: comment this
+        # The pipeline (vectorizer + classifier) is trained on the training features.
         pipeline.fit(X_train, Y_train)
 
-        # TODO: comment this
+        # Predict the labels of the development set.
         Y_pred = pipeline.predict(X_test)
 
-
-        # TODO: comment this
+        # Get the performance metrics.
         acc = accuracy_score(Y_test, Y_pred)
         macro_precision = precision_score(Y_test, Y_pred, average="macro")
         macro_recall = recall_score(Y_test, Y_pred, average="macro")
         macro_f1 = f1_score(Y_test, Y_pred, average="macro")
         report_dict = classification_report(Y_test, Y_pred, output_dict=True)
+
+        # Print classification report
         print(classification_report(Y_test, Y_pred))
+
+        # Print missclassified examples
         for x_test, y_test, y_pred in zip(X_test, Y_test, Y_pred):
             if y_test != y_pred:
                 print("MISSCLASSIFIED")
                 print(" ".join(x_test), y_test, y_pred)
+
+        # Save confusion matrix to image
         save_confusion_matrix(Y_test, Y_pred, classifier, name)
+
+        # Get all the scores from the classification report dictionary
         b_p, b_r, b_f1, _ = get_scores("books", report_dict)
         c_p, c_r, c_f1, _ = get_scores("camera", report_dict)
         d_p, d_r, d_f1, _ = get_scores("dvd", report_dict)
@@ -338,6 +429,7 @@ def run_experiments(classifiers, vec, vec_name, X_train, Y_train, X_test, Y_test
         m_p, m_r, m_f1, _ = get_scores("music", report_dict)
         s_p, s_r, s_f1, _ = get_scores("software", report_dict)
 
+        # Append a row for the classifier's name and result
         results.append(
             [
                 name,
@@ -372,30 +464,38 @@ def run_experiments(classifiers, vec, vec_name, X_train, Y_train, X_test, Y_test
 if __name__ == "__main__":
     args = create_arg_parser()
 
-    # TODO: comment
+    # Read in the features and labels from the train file
     X_train, Y_train = read_corpus(args.train_file, args.sentiment)
+
+    # Read in features from test file if we are finally ready for testing
     if args.test_file:
         X_test, Y_test = read_corpus(args.test_file, args.sentiment)
+    # Otherwise load in development data
     else:
         X_test, Y_test = read_corpus(args.dev_file, args.sentiment)
 
     features = ""
+    # Add word count
     if args.word_count:
         X_train = add_word_count(X_train)
         X_test = add_word_count(X_test)
         features += "wc_"
+    # Add lemmatizing
     if args.lemmatize:
         X_train = lemmatize(X_train)
         X_test = lemmatize(X_test)
         features += "lemmatize_"
+    # Add stemming
     if args.stem:
         X_train = stem(X_train)
         X_test = stem(X_test)
         features += "stem_"
 
+    # Set range start and range end
     rangestart = args.rangestart
     rangeend = rangestart
 
+    # To test multiple ranges we loop from rangestart till range_end
     while rangestart <= args.rangeend:
         print(f"Running n_gram range {rangestart} -> {rangeend}")
 
@@ -411,6 +511,7 @@ if __name__ == "__main__":
                 ngram_range=(rangestart, rangeend),
             )
         elif args.count_tf_idf:
+            # Use a feature union of BOW and TF-iDF
             count = CountVectorizer(
                 preprocessor=identity,
                 tokenizer=identity,
@@ -424,6 +525,7 @@ if __name__ == "__main__":
             vec_name = "Count_TF-IDF"
             vec = FeatureUnion([("count", count), ("tf", tf_idf)])
         elif args.part_of_speech:
+            # Use a feature union of BOW and POS
             count = CountVectorizer(
                 preprocessor=identity,
                 tokenizer=identity,
@@ -437,6 +539,7 @@ if __name__ == "__main__":
             vec = FeatureUnion([("count", count), ("pos", pos)])
             vec_name = "BOW_POS"
         elif args.part_of_speech_tf_idf:
+            # Use a feature union of BOW, POS and TF-IDf
             count = CountVectorizer(
                 preprocessor=identity,
                 tokenizer=identity,
@@ -468,12 +571,15 @@ if __name__ == "__main__":
 
         name = ""
         classifiers = []
+
+        # Use the Naive Bayes classifier experiments
         if args.naive_bayes:
             name = "nb"
             classifiers = [
                 ("Multinomial NB", MultinomialNB()),
             ]
 
+        # Use the KNN classifier experiments
         if args.k_nearest_neighbour:
             name = "knn"
             classifiers = [
@@ -485,6 +591,7 @@ if __name__ == "__main__":
                 ("KNN 8 Weighted", KNeighborsClassifier(8, weights="distance")),
             ]
 
+        # Use the SVM classifier experiments
         if args.support_vector_machine:
             name = "svm"
             classifiers = [
@@ -502,6 +609,7 @@ if __name__ == "__main__":
                 ("SVC C=1.5", SVC(C=1.5)),
             ]
 
+        # Use the DT classifier experiments
         if args.decision_trees:
             name = "dt"
             classifiers = [
@@ -521,6 +629,7 @@ if __name__ == "__main__":
                 ("Decision Tree Gini + Best", DecisionTreeClassifier(criterion="gini")),
             ]
 
+        # Use the RF classifier experiments
         if args.random_forest:
             name = "rf"
             classifiers = [
@@ -532,6 +641,7 @@ if __name__ == "__main__":
                 ),
             ]
 
+        # Use the ensemble classifier experiments
         if args.ensemble:
             name = "ens"
             estimators = [
@@ -542,36 +652,30 @@ if __name__ == "__main__":
                 ("Ensemble method", VotingClassifier(estimators, voting="hard"))
             ]
 
-        if args.best:
-            name = "best"
-            vec_name = "TF-IDF"
-            vec = TfidfVectorizer(
-                preprocessor=identity,
-                tokenizer=identity,
-                ngram_range=(1, 1),
-            )
-            classifiers = [
-                ("LinearSVM C = 0.75", LinearSVC(C=0.75))
-            ]
-
-        # TODO: Add comment
+        # Set up an empty DataFrame with the needed columns
         df = setup_df()
 
-        # TODO: Add comment
+        # Run the experiments from the user specified classifier and get the results
         results = run_experiments(
             classifiers, vec, vec_name, X_train, Y_train, X_test, Y_test
         )
 
-        # TODO: Add comment
+        # Create a DataFrame from the results
         df_extended = pd.DataFrame(results, columns=df.columns)
+
+        # Concatenate the empty DataFrame with the new one
         df = pd.concat([df, df_extended])
+
+        # Create results directory if it does not exist
         if not os.path.exists(args.result_dir):
             os.makedirs(args.result_dir)
+
+        # Save DataFrame to excel
         df.to_excel(
             f"{args.result_dir}/test-{name}-{vec_name}-{features}-{rangestart}-{rangeend}.xlsx"
         )
 
-        # TODO: Add comment
+        # Update the range start and end accordingly to test multiple n-grams.
         rangeend += 1
         if rangeend > args.rangeend:
             rangestart += 1
