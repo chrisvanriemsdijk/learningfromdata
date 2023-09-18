@@ -22,7 +22,7 @@ This uses the SVM experiments with the save directory set to results, range star
 and using the test file.
 """
 
-# Apply the default theme
+# Import the necessary packages
 import argparse
 import os
 
@@ -46,6 +46,7 @@ from sklearn.pipeline import FeatureUnion, Pipeline
 from sklearn.svm import SVC, LinearSVC
 from sklearn.tree import DecisionTreeClassifier
 
+# Download spacy data pipeline, trained on English web data
 nlp = spacy.load("en_core_web_sm")
 
 
@@ -173,7 +174,6 @@ def create_arg_parser():
     args = parser.parse_args()
     return args
 
-
 def read_corpus(corpus_file, use_sentiment):
     """
     Read the file by the given file name and parse the necesarry fields. Can use the sentiment or topic classes
@@ -195,11 +195,9 @@ def read_corpus(corpus_file, use_sentiment):
                 labels.append(tokens[0])
     return documents, labels
 
-
+# Dummy function that only returns the input, to be used in the count functions of sklearn
 def identity(inp):
-    """Dummy function that just returns the input"""
     return inp
-
 
 def identity_string(inp):
     """
@@ -210,31 +208,32 @@ def identity_string(inp):
     """
     return " ".join(inp)
 
-
+# Class that can be added to the sklearn Pipeline, will remove highly correlated functions
 class RemoveCorrelated(BaseEstimator, TransformerMixin):
-    # TODO: Comment
     def fit(self, X, y=None):
         return self
 
     def transform(self, X, y=None):
+        # If not list, (thus Scipy parse matrix), transfrom to dense such that it can be transformed to a pandas dataframe
         if not isinstance(X, list):
             X = X.todense()
+        # Transform to pandas such that matrix operations can easily be applied
         X = pd.DataFrame(X)
 
+        # First calculate correlation
+        # Make sure each correlation appears only once in the matrix, by taking only the upperhalf of the matrix
+        # A correlation is considered highly correlated if higher than 0.90, those will be dropped
         corr = X.corr().abs()
         upper = corr.where(np.triu(np.ones(corr.shape), k=1).astype(np.bool))
         to_drop = [column for column in upper.columns if any(upper[column] > 0.90)]
         print(to_drop)
+        # Instead of dropping the feature will become only zeros. This has the same effect as dropping the column
         for i in to_drop:
-            print(X[i])
             X[i] = 0
-            print(X[i])
 
-        print(type(X))
-        print(X)
+        # Transform back to parse matrix 
         X = csr_matrix(X.values)
         return X
-
 
 def spacy_pos(txt):
     """
@@ -244,22 +243,23 @@ def spacy_pos(txt):
     """
     return [token.pos_ for token in nlp(txt)]
 
-
 def check_balance(y):
     """
     Chech the (im)balance of the dataset by plotting each label
     @param y: the topics
     """
     data = {}
+    # Compute the number of occurences
     for label in y:
         if not data.get(label):
             data[label] = 1
         data[label] += 1
     labels = data.keys()
     values = data.values()
+    # Show in a plot
     plt.bar(labels, values)
     plt.show()
-
+    
 
 def get_scores(key: str, report_dict):
     """
@@ -271,7 +271,6 @@ def get_scores(key: str, report_dict):
     dict_values = report_dict[key]
     return dict_values.values()
 
-
 def save_confusion_matrix(Y_test, Y_pred, classifier, name):
     """
     Save the confusion matrix of the specified classifier
@@ -281,16 +280,18 @@ def save_confusion_matrix(Y_test, Y_pred, classifier, name):
     @param name: Name of the classifier
     """
     cm = confusion_matrix(Y_test, Y_pred)
+    # Plot the confusion matrix, given the confusion matrix and the classifier classes
     disp = ConfusionMatrixDisplay(
         confusion_matrix=cm, display_labels=classifier.classes_
     )
     disp.plot()
     disp.ax_.set_title(name)
+    # Save the plot cm (confusion matrix) directory
+    # Saved with name given, should be a descriptive name
     if not os.path.exists("cm"):
         os.makedirs("cm")
     disp.figure_.savefig(f"cm/{name}.png", dpi=300)
     print(f"Confusion matrix of classifier {name} is saved to cm/{name}.png")
-
 
 def add_word_count(x):
     """
@@ -300,13 +301,14 @@ def add_word_count(x):
     """
     lexicon = Empath()
     n = []
+    # Iterates all words in a review
+    # Calculate the normalized (such that it is comparable with other words) count per category
     for i in x:
         add = lexicon.analyze(i, normalize=True).values()
         add = list(add)
         add = np.array(add)
         n.append(add)
     return n
-
 
 def lemmatize(x):
     """
@@ -316,10 +318,11 @@ def lemmatize(x):
     """
     lemmatizer = WordNetLemmatizer()
     new_docs = []
+    # Iterates all documents in a the given dataset
     for doc in x:
+        # Iterates all words in the document and lemmatize
         new_docs.append([lemmatizer.lemmatize(word) for word in doc])
     return new_docs
-
 
 def stem(x):
     """
@@ -329,10 +332,11 @@ def stem(x):
     """
     stemmer = SnowballStemmer("english")
     new_docs = []
+    # Iterates all documents in the given dataset
     for doc in x:
+        # Iterates all words in the document and stem
         new_docs.append([stemmer.stem(word) for word in doc])
     return new_docs
-
 
 def setup_df():
     """
@@ -369,7 +373,6 @@ def setup_df():
         }
     )
 
-
 def run_experiments(classifiers, vec, vec_name, X_train, Y_train, X_test, Y_test):
     """
     Main function to run all the classifiers with a given vectorizer, vectorizer name, and input/output.
@@ -384,15 +387,19 @@ def run_experiments(classifiers, vec, vec_name, X_train, Y_train, X_test, Y_test
     """
 
     results = []
+    # Iterate the given classifiers
     for name, classifier in classifiers:
         pipe = []
 
+        # If word count is used as a feature vector, no vectorizer is used
         if not args.word_count:
             pipe.append(("vec", vec))
 
+        # If the argument 'correlated' is given, the higly correlated features should be removed
         if args.correlated:
             pipe.append(("corr", RemoveCorrelated()))
 
+        # Add classifier and add to sklearn Pipeline. The Pipeline keeps the code organized and overcomes mistake, such as leaking test data into training data
         pipe.append(("cls", classifier))
         pipeline = Pipeline(pipe)
 
@@ -407,12 +414,12 @@ def run_experiments(classifiers, vec, vec_name, X_train, Y_train, X_test, Y_test
         macro_precision = precision_score(Y_test, Y_pred, average="macro")
         macro_recall = recall_score(Y_test, Y_pred, average="macro")
         macro_f1 = f1_score(Y_test, Y_pred, average="macro")
+        # Compute performance per category by using classification report of sklearn
         report_dict = classification_report(Y_test, Y_pred, output_dict=True)
 
         # Print classification report
         print(classification_report(Y_test, Y_pred))
-
-        # Print missclassified examples
+        # Print any misclassified reviews, to analyze
         for x_test, y_test, y_pred in zip(X_test, Y_test, Y_pred):
             if y_test != y_pred:
                 print("MISSCLASSIFIED")
@@ -420,8 +427,7 @@ def run_experiments(classifiers, vec, vec_name, X_train, Y_train, X_test, Y_test
 
         # Save confusion matrix to image
         save_confusion_matrix(Y_test, Y_pred, classifier, name)
-
-        # Get all the scores from the classification report dictionary
+        # Load score per category in coresponding variable
         b_p, b_r, b_f1, _ = get_scores("books", report_dict)
         c_p, c_r, c_f1, _ = get_scores("camera", report_dict)
         d_p, d_r, d_f1, _ = get_scores("dvd", report_dict)
@@ -429,7 +435,7 @@ def run_experiments(classifiers, vec, vec_name, X_train, Y_train, X_test, Y_test
         m_p, m_r, m_f1, _ = get_scores("music", report_dict)
         s_p, s_r, s_f1, _ = get_scores("software", report_dict)
 
-        # Append a row for the classifier's name and result
+        # Append all results, to return, such that it can be analyzed
         results.append(
             [
                 name,
@@ -464,7 +470,7 @@ def run_experiments(classifiers, vec, vec_name, X_train, Y_train, X_test, Y_test
 if __name__ == "__main__":
     args = create_arg_parser()
 
-    # Read in the features and labels from the train file
+    # Load corpus. Use test file if given, otherwise use dev set
     X_train, Y_train = read_corpus(args.train_file, args.sentiment)
 
     # Read in features from test file if we are finally ready for testing
@@ -474,6 +480,7 @@ if __name__ == "__main__":
     else:
         X_test, Y_test = read_corpus(args.dev_file, args.sentiment)
 
+    # Add additional features if indicated in the arguments
     features = ""
     # Add word count
     if args.word_count:
@@ -499,6 +506,7 @@ if __name__ == "__main__":
     while rangestart <= args.rangeend:
         print(f"Running n_gram range {rangestart} -> {rangeend}")
 
+        # If tfidf argument is given, use the TF-IDF vectorizer
         if args.tfidf:
             vec_name = "TF-IDF"
             # Convert the texts to vectors
@@ -510,6 +518,7 @@ if __name__ == "__main__":
                 tokenizer=identity,
                 ngram_range=(rangestart, rangeend),
             )
+        # Use count vectorizer and TF-IDF if indicated in arguments
         elif args.count_tf_idf:
             # Use a feature union of BOW and TF-iDF
             count = CountVectorizer(
@@ -524,6 +533,7 @@ if __name__ == "__main__":
             )
             vec_name = "Count_TF-IDF"
             vec = FeatureUnion([("count", count), ("tf", tf_idf)])
+        # Add POS to bow if indicated in arguments
         elif args.part_of_speech:
             # Use a feature union of BOW and POS
             count = CountVectorizer(
@@ -538,6 +548,7 @@ if __name__ == "__main__":
             )
             vec = FeatureUnion([("count", count), ("pos", pos)])
             vec_name = "BOW_POS"
+        # Add POS to tfidf if indicated in arguments
         elif args.part_of_speech_tf_idf:
             # Use a feature union of BOW, POS and TF-IDf
             count = CountVectorizer(
@@ -557,6 +568,7 @@ if __name__ == "__main__":
             )
             vec = FeatureUnion([("count", count), ("pos", pos), ("tf", tf_idf)])
             vec_name = "BOW_POS_TF-IDF"
+        # If none given, use bag of words
         else:
             vec_name = "BOW"
             # Convert the texts to vectors
@@ -569,12 +581,15 @@ if __name__ == "__main__":
                 ngram_range=(rangestart, rangeend),
             )
 
+        # Add the classifier indicated in the arguments
+        # The classifiers will be passed to the run_experiments function, to train and test the models
         name = ""
         classifiers = []
 
         # Use the Naive Bayes classifier experiments
         if args.naive_bayes:
             name = "nb"
+            # Init all tested NB models
             classifiers = [
                 ("Multinomial NB", MultinomialNB()),
             ]
@@ -582,6 +597,7 @@ if __name__ == "__main__":
         # Use the KNN classifier experiments
         if args.k_nearest_neighbour:
             name = "knn"
+            # Init all tested KNN models
             classifiers = [
                 ("KNN 8", KNeighborsClassifier(8)),
                 ("KNN 3", KNeighborsClassifier(3)),
@@ -594,6 +610,7 @@ if __name__ == "__main__":
         # Use the SVM classifier experiments
         if args.support_vector_machine:
             name = "svm"
+            # Init all tested SVM models
             classifiers = [
                 ("LinearSVM C = 0.5", LinearSVC(C=0.5)),
                 ("LinearSVM C = 1", LinearSVC()),
@@ -612,6 +629,7 @@ if __name__ == "__main__":
         # Use the DT classifier experiments
         if args.decision_trees:
             name = "dt"
+            # Init all tested DT models
             classifiers = [
                 (
                     "Decision Tree Gini + Random",
@@ -632,6 +650,7 @@ if __name__ == "__main__":
         # Use the RF classifier experiments
         if args.random_forest:
             name = "rf"
+            # Init all tested RF models
             classifiers = [
                 ("Random Forest Gini ", RandomForestClassifier(criterion="gini")),
                 ("Random Forest Entropy", RandomForestClassifier(criterion="entropy")),
@@ -644,6 +663,7 @@ if __name__ == "__main__":
         # Use the ensemble classifier experiments
         if args.ensemble:
             name = "ens"
+            # Init all tested Ensemble models
             estimators = [
                 ("rf", RandomForestClassifier(criterion="log_loss")),
                 ("svm", LinearSVC()),
@@ -652,21 +672,34 @@ if __name__ == "__main__":
                 ("Ensemble method", VotingClassifier(estimators, voting="hard"))
             ]
 
-        # Set up an empty DataFrame with the needed columns
+        if args.best:
+            name = "best"
+            vec_name = "TF-IDF"
+            vec = TfidfVectorizer(
+                preprocessor=identity,
+                tokenizer=identity,
+                ngram_range=(1, 1),
+            )
+            # Init all the best performing model
+            classifiers = [
+                ("LinearSVM C = 0.75", LinearSVC(C=0.75))
+            ]
+
+        # Setup dataframe to store the results
         df = setup_df()
 
-        # Run the experiments from the user specified classifier and get the results
+        # Run the experiments for the given classifiers, vectorizer and dataset
         results = run_experiments(
             classifiers, vec, vec_name, X_train, Y_train, X_test, Y_test
         )
 
-        # Create a DataFrame from the results
+        # Store the results into the pandas dataframe
         df_extended = pd.DataFrame(results, columns=df.columns)
 
         # Concatenate the empty DataFrame with the new one
         df = pd.concat([df, df_extended])
-
-        # Create results directory if it does not exist
+        # Store the dataframe with results into an excel sheet, to analyze the performance easily
+        # Excel name will correspond to trained model
         if not os.path.exists(args.result_dir):
             os.makedirs(args.result_dir)
 
@@ -675,7 +708,9 @@ if __name__ == "__main__":
             f"{args.result_dir}/{name}-{vec_name}-{features}-{rangestart}-{rangeend}.xlsx"
         )
 
-        # Update the range start and end accordingly to test multiple n-grams.
+        # If experiments for ngram range finished, the experiments for the next possible range will be conducted
+        # The range will become 1 larger, if the range becomes larger than given in the arguments, raise the start of the range
+        # E.g. this will follow the structure: 1->1 1->2, 2->2. Finish
         rangeend += 1
         if rangeend > args.rangeend:
             rangestart += 1
