@@ -37,9 +37,15 @@ from scipy.sparse import csr_matrix
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
-from sklearn.metrics import (ConfusionMatrixDisplay, accuracy_score,
-                             classification_report, confusion_matrix, f1_score,
-                             precision_score, recall_score)
+from sklearn.metrics import (
+    ConfusionMatrixDisplay,
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
+    f1_score,
+    precision_score,
+    recall_score,
+)
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import FeatureUnion, Pipeline
@@ -174,6 +180,7 @@ def create_arg_parser():
     args = parser.parse_args()
     return args
 
+
 def read_corpus(corpus_file, use_sentiment):
     """
     Read the file by the given file name and parse the necesarry fields. Can use the sentiment or topic classes
@@ -195,9 +202,11 @@ def read_corpus(corpus_file, use_sentiment):
                 labels.append(tokens[0])
     return documents, labels
 
+
 # Dummy function that only returns the input, to be used in the count functions of sklearn
 def identity(inp):
     return inp
+
 
 def identity_string(inp):
     """
@@ -207,6 +216,7 @@ def identity_string(inp):
     @return: Concatenated string of words with spaces.
     """
     return " ".join(inp)
+
 
 # Class that can be added to the sklearn Pipeline, will remove highly correlated functions
 class RemoveCorrelated(BaseEstimator, TransformerMixin):
@@ -231,9 +241,10 @@ class RemoveCorrelated(BaseEstimator, TransformerMixin):
         for i in to_drop:
             X[i] = 0
 
-        # Transform back to parse matrix 
+        # Transform back to parse matrix
         X = csr_matrix(X.values)
         return X
+
 
 def spacy_pos(txt):
     """
@@ -242,6 +253,7 @@ def spacy_pos(txt):
     @return: list: POS tag of each word from `txt`
     """
     return [token.pos_ for token in nlp(txt)]
+
 
 def check_balance(y):
     """
@@ -259,7 +271,7 @@ def check_balance(y):
     # Show in a plot
     plt.bar(labels, values)
     plt.show()
-    
+
 
 def get_scores(key: str, report_dict):
     """
@@ -270,6 +282,7 @@ def get_scores(key: str, report_dict):
     """
     dict_values = report_dict[key]
     return dict_values.values()
+
 
 def save_confusion_matrix(Y_test, Y_pred, classifier, name):
     """
@@ -293,6 +306,7 @@ def save_confusion_matrix(Y_test, Y_pred, classifier, name):
     disp.figure_.savefig(f"cm/{name}.png", dpi=300)
     print(f"Confusion matrix of classifier {name} is saved to cm/{name}.png")
 
+
 def add_word_count(x):
     """
     Function to add word count to the input
@@ -310,6 +324,7 @@ def add_word_count(x):
         n.append(add)
     return n
 
+
 def lemmatize(x):
     """
     Lemmatizes the input, goes over each word in each data sample and lemmatizes the word
@@ -324,6 +339,7 @@ def lemmatize(x):
         new_docs.append([lemmatizer.lemmatize(word) for word in doc])
     return new_docs
 
+
 def stem(x):
     """
     Stems the input, goes over each word in each data sample and stems the word
@@ -337,6 +353,7 @@ def stem(x):
         # Iterates all words in the document and stem
         new_docs.append([stemmer.stem(word) for word in doc])
     return new_docs
+
 
 def setup_df():
     """
@@ -372,6 +389,7 @@ def setup_df():
             "software_f1": [],
         }
     )
+
 
 def run_experiments(classifiers, vec, vec_name, X_train, Y_train, X_test, Y_test):
     """
@@ -643,7 +661,6 @@ if __name__ == "__main__":
                     "Decision Tree Entorpy + Best",
                     DecisionTreeClassifier(criterion="entropy"),
                 ),
-
                 ("Decision Tree Gini + Best", DecisionTreeClassifier(criterion="gini")),
             ]
 
@@ -681,9 +698,7 @@ if __name__ == "__main__":
                 ngram_range=(1, 1),
             )
             # Init all the best performing model
-            classifiers = [
-                ("LinearSVM C = 0.75", LinearSVC(C=0.75))
-            ]
+            classifiers = [("LinearSVM C = 0.75", LinearSVC(C=0.75))]
 
         # Setup dataframe to store the results
         df = setup_df()
