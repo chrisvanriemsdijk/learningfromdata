@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-This python script was used for the research paper: Exploring Classifiers for Automated Review Topic Detection
+This python script was used for the research paper: "Exploring Classifiers for Automated Review Topic Detection"
 
 It enables the user to run experiments on the pre-defined experiments and saves the confusion matrices and results.
 
@@ -672,7 +672,7 @@ if __name__ == "__main__":
 
         # Save DataFrame to excel
         df.to_excel(
-            f"{args.result_dir}/test-{name}-{vec_name}-{features}-{rangestart}-{rangeend}.xlsx"
+            f"{args.result_dir}/{name}-{vec_name}-{features}-{rangestart}-{rangeend}.xlsx"
         )
 
         # Update the range start and end accordingly to test multiple n-grams.
