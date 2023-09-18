@@ -1,7 +1,26 @@
 #!/usr/bin/env python
 
-"""TODO: add high-level description of this Python script"""
+"""
+This python script was used for the research paper: Exploring Classifiers for Automated Review Topic Detection
 
+It enables the user to run experiments on the pre-defined experiments and saves the confusion matrices and results.
+
+To use this script create a virtual environment or a Conda environment and install the necesarry packages with the
+following command:
+`pip install -r requirements.txt`
+
+Also run the following command:
+`python -m spacy download en_core_web_sm`
+
+This script uses argparse, you can get all the necessary settings with:
+`python lfd_assignment1.py --help`
+
+To run our best model on the test set run the following command:
+python3 lfd_assignment1.py -svm -dir results -rs 1 -re 1 -t -l -st -test test.txt
+
+This uses the SVM experiments with the save directory set to results, range start and end of 1, lemmatizing, stemming,
+and using the test file.
+"""
 
 # Import the necessary packages
 import argparse
@@ -21,7 +40,6 @@ from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.metrics import (ConfusionMatrixDisplay, accuracy_score,
                              classification_report, confusion_matrix, f1_score,
                              precision_score, recall_score)
-from sklearn.model_selection import GridSearchCV
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import FeatureUnion, Pipeline
@@ -31,9 +49,12 @@ from sklearn.tree import DecisionTreeClassifier
 # Download spacy data pipeline, trained on English web data
 nlp = spacy.load("en_core_web_sm")
 
-# Read arguments, such that the script can be controlled from the command line
-# Define dataset to use, model to use, range to use etc.
+
 def create_arg_parser():
+    """
+    Creates the argument parser with all the arguments and parses the user's input when calling the script
+    @return: parsed args
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-tf",
@@ -150,12 +171,16 @@ def create_arg_parser():
         help="Combined features with BOW, POS and TF-IDF",
     )
     parser.add_argument("-st", "--stem", action="store_true", help="Store input")
-    parser.add_argument("-b", "--best", action="store_true", help="Run the best model")
     args = parser.parse_args()
     return args
 
-# Read corpus to use as input for the sklearn models, returns array of documents and array of labels
 def read_corpus(corpus_file, use_sentiment):
+    """
+    Read the file by the given file name and parse the necesarry fields. Can use the sentiment or topic classes
+    @param corpus_file: File name of the corpus_file
+    @param use_sentiment: Whether to use sentiment (2-class) or topics (6-class)
+    @return:
+    """
     documents = []
     labels = []
     with open(corpus_file, encoding="utf-8") as in_file:
@@ -174,8 +199,13 @@ def read_corpus(corpus_file, use_sentiment):
 def identity(inp):
     return inp
 
-# Function that adds a space to the input and returns, to be used in the count functions of sklearn when using POS
 def identity_string(inp):
+    """
+    SpaCy can only extract the POS tags of words and not lists, therefore we need to use this function
+    that joins the whole input.
+    @param inp: List of words
+    @return: Concatenated string of words with spaces.
+    """
     return " ".join(inp)
 
 # Class that can be added to the sklearn Pipeline, will remove highly correlated functions
@@ -205,12 +235,19 @@ class RemoveCorrelated(BaseEstimator, TransformerMixin):
         X = csr_matrix(X.values)
         return X
 
-# Return the POS tag given by the spacy model, to be used asa feature vector
 def spacy_pos(txt):
+    """
+    Return the SpaCy POS tag per token
+    @param txt: Concatenated string of words
+    @return: list: POS tag of each word from `txt`
+    """
     return [token.pos_ for token in nlp(txt)]
 
-# Calculates the number of labels per category, to analyze the data
 def check_balance(y):
+    """
+    Chech the (im)balance of the dataset by plotting each label
+    @param y: the topics
+    """
     data = {}
     # Compute the number of occurences
     for label in y:
@@ -221,18 +258,27 @@ def check_balance(y):
     values = data.values()
     # Show in a plot
     plt.bar(labels, values)
-    print(data)
     plt.show()
+    
 
-# Use a dictionary to store the scores per category
-# Return the scores of a given label
 def get_scores(key: str, report_dict):
+    """
+    Get the scores of each topic from the classification report dictionary
+    @param key: the key like "camera" or "dvd"
+    @param report_dict: The classification report dictionary
+    @return: The values of the classification report dictionary of the given key
+    """
     dict_values = report_dict[key]
     return dict_values.values()
 
-# Save a confusion matrix to analyze the performance of a model
 def save_confusion_matrix(Y_test, Y_pred, classifier, name):
-    # Compute confusion matrix with the sklearn function
+    """
+    Save the confusion matrix of the specified classifier
+    @param Y_test: The ground-truth Y-values
+    @param Y_pred: Predicted Y-values
+    @param classifier: Classifier used to get the classes
+    @param name: Name of the classifier
+    """
     cm = confusion_matrix(Y_test, Y_pred)
     # Plot the confusion matrix, given the confusion matrix and the classifier classes
     disp = ConfusionMatrixDisplay(
@@ -247,9 +293,12 @@ def save_confusion_matrix(Y_test, Y_pred, classifier, name):
     disp.figure_.savefig(f"cm/{name}.png", dpi=300)
     print(f"Confusion matrix of classifier {name} is saved to cm/{name}.png")
 
-# Uses Empath to calculate the occurence of words from categories, to be used as a feature vector
 def add_word_count(x):
-    # Init the lexicon
+    """
+    Function to add word count to the input
+    @param x: Features
+    @return: Word count of the features
+    """
     lexicon = Empath()
     n = []
     # Iterates all words in a review
@@ -261,9 +310,12 @@ def add_word_count(x):
         n.append(add)
     return n
 
-# Lemmatize the dataset, to preprocess the data that will be used as a feature vector
 def lemmatize(x):
-    # Init lemmatizer (ntlk)
+    """
+    Lemmatizes the input, goes over each word in each data sample and lemmatizes the word
+    @param x: Data samples
+    @return: Lemmatized data samples
+    """
     lemmatizer = WordNetLemmatizer()
     new_docs = []
     # Iterates all documents in a the given dataset
@@ -272,9 +324,12 @@ def lemmatize(x):
         new_docs.append([lemmatizer.lemmatize(word) for word in doc])
     return new_docs
 
-# Stem the datset, to preprocess the data that will be used as a feature vector
 def stem(x):
-    # Init an English stemmer (nltk)
+    """
+    Stems the input, goes over each word in each data sample and stems the word
+    @param x: Data samples
+    @return: Stemmed data samples
+    """
     stemmer = SnowballStemmer("english")
     new_docs = []
     # Iterates all documents in the given dataset
@@ -283,10 +338,12 @@ def stem(x):
         new_docs.append([stemmer.stem(word) for word in doc])
     return new_docs
 
-# Setup dataframe to store and visualize the performance of a model
-# The classifier name, vectorizer and accuracy should be stored
-# Per label the precision, recall and f1 should be stored
 def setup_df():
+    """
+    To save the results we used Pandas, we first need to set up the dataset.
+    Therefore, we need to create the columns first.
+    @return: Empty DataFrame with columns.
+    """
     return pd.DataFrame(
         {
             "classifier": [],
@@ -316,8 +373,19 @@ def setup_df():
         }
     )
 
-# Takes classifiers, vectorizers and data as an input. Will train and test the models
 def run_experiments(classifiers, vec, vec_name, X_train, Y_train, X_test, Y_test):
+    """
+    Main function to run all the classifiers with a given vectorizer, vectorizer name, and input/output.
+    @param classifiers: List of classifiers to use
+    @param vec: Vectorizer to use
+    @param vec_name: Vectorizer name for saving in the DataFrame
+    @param X_train: Train features
+    @param Y_train: Train Feature labels
+    @param X_test: Test features
+    @param Y_test: Test feature labels
+    @return: list of results
+    """
+
     results = []
     # Iterate the given classifiers
     for name, classifier in classifiers:
@@ -335,26 +403,29 @@ def run_experiments(classifiers, vec, vec_name, X_train, Y_train, X_test, Y_test
         pipe.append(("cls", classifier))
         pipeline = Pipeline(pipe)
 
-        # Fit the model to the data
+        # The pipeline (vectorizer + classifier) is trained on the training features.
         pipeline.fit(X_train, Y_train)
 
-        # Transform data and use test data to test the performance
+        # Predict the labels of the development set.
         Y_pred = pipeline.predict(X_test)
 
-
-        # Calculate accuracy, precision, recall, f1 by using sklearn functions
+        # Get the performance metrics.
         acc = accuracy_score(Y_test, Y_pred)
         macro_precision = precision_score(Y_test, Y_pred, average="macro")
         macro_recall = recall_score(Y_test, Y_pred, average="macro")
         macro_f1 = f1_score(Y_test, Y_pred, average="macro")
         # Compute performance per category by using classification report of sklearn
         report_dict = classification_report(Y_test, Y_pred, output_dict=True)
+
+        # Print classification report
         print(classification_report(Y_test, Y_pred))
         # Print any misclassified reviews, to analyze
         for x_test, y_test, y_pred in zip(X_test, Y_test, Y_pred):
             if y_test != y_pred:
                 print("MISSCLASSIFIED")
                 print(" ".join(x_test), y_test, y_pred)
+
+        # Save confusion matrix to image
         save_confusion_matrix(Y_test, Y_pred, classifier, name)
         # Load score per category in coresponding variable
         b_p, b_r, b_f1, _ = get_scores("books", report_dict)
@@ -401,30 +472,37 @@ if __name__ == "__main__":
 
     # Load corpus. Use test file if given, otherwise use dev set
     X_train, Y_train = read_corpus(args.train_file, args.sentiment)
+
+    # Read in features from test file if we are finally ready for testing
     if args.test_file:
         X_test, Y_test = read_corpus(args.test_file, args.sentiment)
+    # Otherwise load in development data
     else:
         X_test, Y_test = read_corpus(args.dev_file, args.sentiment)
 
     # Add additional features if indicated in the arguments
     features = ""
+    # Add word count
     if args.word_count:
         X_train = add_word_count(X_train)
         X_test = add_word_count(X_test)
         features += "wc_"
+    # Add lemmatizing
     if args.lemmatize:
         X_train = lemmatize(X_train)
         X_test = lemmatize(X_test)
         features += "lemmatize_"
+    # Add stemming
     if args.stem:
         X_train = stem(X_train)
         X_test = stem(X_test)
         features += "stem_"
 
+    # Set range start and range end
     rangestart = args.rangestart
     rangeend = rangestart
 
-    # Iterate all possible ngram ranges. If rangestart is larger than the given rangeend, than all possible combinations are runned
+    # To test multiple ranges we loop from rangestart till range_end
     while rangestart <= args.rangeend:
         print(f"Running n_gram range {rangestart} -> {rangeend}")
 
@@ -442,6 +520,7 @@ if __name__ == "__main__":
             )
         # Use count vectorizer and TF-IDF if indicated in arguments
         elif args.count_tf_idf:
+            # Use a feature union of BOW and TF-iDF
             count = CountVectorizer(
                 preprocessor=identity,
                 tokenizer=identity,
@@ -456,6 +535,7 @@ if __name__ == "__main__":
             vec = FeatureUnion([("count", count), ("tf", tf_idf)])
         # Add POS to bow if indicated in arguments
         elif args.part_of_speech:
+            # Use a feature union of BOW and POS
             count = CountVectorizer(
                 preprocessor=identity,
                 tokenizer=identity,
@@ -470,6 +550,7 @@ if __name__ == "__main__":
             vec_name = "BOW_POS"
         # Add POS to tfidf if indicated in arguments
         elif args.part_of_speech_tf_idf:
+            # Use a feature union of BOW, POS and TF-IDf
             count = CountVectorizer(
                 preprocessor=identity,
                 tokenizer=identity,
@@ -504,6 +585,8 @@ if __name__ == "__main__":
         # The classifiers will be passed to the run_experiments function, to train and test the models
         name = ""
         classifiers = []
+
+        # Use the Naive Bayes classifier experiments
         if args.naive_bayes:
             name = "nb"
             # Init all tested NB models
@@ -511,6 +594,7 @@ if __name__ == "__main__":
                 ("Multinomial NB", MultinomialNB()),
             ]
 
+        # Use the KNN classifier experiments
         if args.k_nearest_neighbour:
             name = "knn"
             # Init all tested KNN models
@@ -523,6 +607,7 @@ if __name__ == "__main__":
                 ("KNN 8 Weighted", KNeighborsClassifier(8, weights="distance")),
             ]
 
+        # Use the SVM classifier experiments
         if args.support_vector_machine:
             name = "svm"
             # Init all tested SVM models
@@ -541,6 +626,7 @@ if __name__ == "__main__":
                 ("SVC C=1.5", SVC(C=1.5)),
             ]
 
+        # Use the DT classifier experiments
         if args.decision_trees:
             name = "dt"
             # Init all tested DT models
@@ -561,6 +647,7 @@ if __name__ == "__main__":
                 ("Decision Tree Gini + Best", DecisionTreeClassifier(criterion="gini")),
             ]
 
+        # Use the RF classifier experiments
         if args.random_forest:
             name = "rf"
             # Init all tested RF models
@@ -573,6 +660,7 @@ if __name__ == "__main__":
                 ),
             ]
 
+        # Use the ensemble classifier experiments
         if args.ensemble:
             name = "ens"
             # Init all tested Ensemble models
@@ -607,11 +695,15 @@ if __name__ == "__main__":
 
         # Store the results into the pandas dataframe
         df_extended = pd.DataFrame(results, columns=df.columns)
+
+        # Concatenate the empty DataFrame with the new one
         df = pd.concat([df, df_extended])
         # Store the dataframe with results into an excel sheet, to analyze the performance easily
         # Excel name will correspond to trained model
         if not os.path.exists(args.result_dir):
             os.makedirs(args.result_dir)
+
+        # Save DataFrame to excel
         df.to_excel(
             f"{args.result_dir}/test-{name}-{vec_name}-{features}-{rangestart}-{rangeend}.xlsx"
         )
