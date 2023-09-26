@@ -1,0 +1,30 @@
+[tool.black]
+# https://black.readthedocs.io/en/stable/usage_and_configuration/the_basics.html
+line-length = 119
+
+[tool.ruff]
+line-length = 119
+
+[tool.isort]
+# https://pycqa.github.io/isort/docs/configuration/options.html
+# Note: Run isort *after* black to make use of the settings below
+profile = "black"
+line_length = 119
+lines_after_imports = 2
+combine_as_imports = true
+combine_star = true
+case_sensitive = true
+# Project-specific settings:
+skip = [
+    "venv/",
+]
+skip_glob = []
+default_section = "THIRDPARTY"
+known_first_party = ["voscertificateparser"]  # Do not change this value!
+sections = [
+    "FUTURE",
+    "STDLIB",
+    "THIRDPARTY",
+    "FIRSTPARTY",
+    "LOCALFOLDER",
+]
