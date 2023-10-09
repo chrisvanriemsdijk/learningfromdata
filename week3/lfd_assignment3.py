@@ -7,10 +7,11 @@ import json
 import argparse
 import numpy as np
 from keras.models import Sequential
-from keras.layers import Dense, Embedding, LSTM
+from keras.layers import Dense, Embedding, LSTM, Bidirectional
 from keras.initializers import Constant
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import LabelBinarizer
+from tensorflow.keras.optimizers import SGD, Adadelta
 from tensorflow.keras.optimizers.legacy import Adam
 from tensorflow.keras.layers import TextVectorization
 import tensorflow as tf
@@ -36,6 +37,12 @@ def create_arg_parser():
         default="glove_reviews.json",
         type=str,
         help="Embedding file we are using (default glove_reviews.json)",
+    )
+    parser.add_argument(
+        "-td",
+        "--trainable_dense",
+        action ="store_true",
+        help = "Apply a dense layer between a trainable Embedding layer and LSTM layer"
     )
     args = parser.parse_args()
     return args
@@ -77,7 +84,7 @@ def get_emb_matrix(voc, emb):
     return embedding_matrix
 
 
-def create_model(Y_train, emb_matrix):
+def create_model(Y_train, emb_matrix, args):
     """Create the Keras model to use"""
     # Define settings, you might want to create cmd line args for them
     learning_rate = 0.0005
@@ -89,12 +96,19 @@ def create_model(Y_train, emb_matrix):
     num_labels = len(set(Y_train))
     # Now build the model
     model = Sequential()
-    model.add(Embedding(num_tokens, embedding_dim, embeddings_initializer=Constant(emb_matrix), trainable=False))
-    model.add(LSTM(embedding_dim, dropout=0.2))
+    if args.trainable_dense:
+        model.add(Embedding(num_tokens, embedding_dim, embeddings_initializer=Constant(emb_matrix), trainable=True))
+        model.add(Dense(embedding_dim))
+    else:
+        model.add(Embedding(num_tokens, embedding_dim, embeddings_initializer=Constant(emb_matrix), trainable=False))
+    #model.add(LSTM(embedding_dim, return_sequences=True))
+    model.add(LSTM(embedding_dim))
+    #model.add(LSTM(64))
     # Ultimately, end with dense layer with softmax
     model.add(Dense(input_dim=embedding_dim, units=num_labels, activation="softmax"))
     # Compile model using our settings, check for accuracy
     model.compile(loss=loss_function, optimizer=optim, metrics=["accuracy"])
+    print(model.summary())
     return model
 
 
@@ -103,7 +117,7 @@ def train_model(model, X_train, Y_train, X_dev, Y_dev):
     # Potentially change these to cmd line args again
     # And yes, don't be afraid to experiment!
     verbose = 1
-    batch_size = 16
+    batch_size = 32
     epochs = 50
     # Early stopping: stop training when there are three consecutive epochs without improving
     # It's also possible to monitor the training loss with monitor="loss"
@@ -158,7 +172,7 @@ def main():
     Y_dev_bin = encoder.fit_transform(Y_dev)
 
     # Create model
-    model = create_model(Y_train, emb_matrix)
+    model = create_model(Y_train, emb_matrix, args)
 
     # Transform input to vectorized input
     X_train_vect = vectorizer(np.array([[s] for s in X_train])).numpy()
