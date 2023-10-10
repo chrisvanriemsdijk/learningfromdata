@@ -11,7 +11,6 @@ from keras.layers import Dense, Embedding, LSTM, Bidirectional
 from keras.initializers import Constant
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import LabelBinarizer
-from tensorflow.keras.optimizers import SGD, Adadelta
 from tensorflow.keras.optimizers.legacy import Adam
 from tensorflow.keras.layers import TextVectorization
 import tensorflow as tf
@@ -39,10 +38,36 @@ def create_arg_parser():
         help="Embedding file we are using (default glove_reviews.json)",
     )
     parser.add_argument(
-        "-td",
-        "--trainable_dense",
-        action ="store_true",
-        help = "Apply a dense layer between a trainable Embedding layer and LSTM layer"
+        "-tr",
+        "--trainable",
+        action="store_true",
+        help="Use a trainable Embedding layer",
+    )
+    parser.add_argument(
+        "-dense",
+        "--add_dense",
+        action="store_true",
+        help="Apply a dense layer between the embedding layers and LSTM layers",
+    )
+    parser.add_argument(
+        "-do",
+        "--dropout",
+        default=0.2,
+        type=float,
+        help="Percentage of dropout applied in the LSTM layers",
+    )
+    parser.add_argument(
+        "-rdo",
+        "--recurrent_dropout",
+        default=0.2,
+        type=float,
+        help="Percentage of recurrent dropout applied in the LSTM layers",
+    )
+    parser.add_argument(
+        "-bi",
+        "--bidirectional",
+        action="store_true",
+        help="Implement bidirectional LSTM",
     )
     args = parser.parse_args()
     return args
@@ -90,20 +115,50 @@ def create_model(Y_train, emb_matrix, args):
     learning_rate = 0.0005
     loss_function = "categorical_crossentropy"
     optim = Adam(learning_rate=learning_rate)
+    # optim = RMSprop(learning_rate=learning_rate)
     # Take embedding dim and size from emb_matrix
     embedding_dim = len(emb_matrix[0])
     num_tokens = len(emb_matrix)
     num_labels = len(set(Y_train))
+
     # Now build the model
     model = Sequential()
-    if args.trainable_dense:
+    if args.trainable:
         model.add(Embedding(num_tokens, embedding_dim, embeddings_initializer=Constant(emb_matrix), trainable=True))
-        model.add(Dense(embedding_dim))
     else:
         model.add(Embedding(num_tokens, embedding_dim, embeddings_initializer=Constant(emb_matrix), trainable=False))
-    #model.add(LSTM(embedding_dim, return_sequences=True))
-    model.add(LSTM(embedding_dim))
-    #model.add(LSTM(64))
+    if args.add_dense:
+        model.add(Dense(embedding_dim))
+
+    if args.bidirectional:
+        model.add(
+            Bidirectional(
+                LSTM(
+                    embedding_dim,
+                    dropout=args.dropout if args.dropout else 0.0,
+                    recurrent_dropout=args.recurrent_dropout if args.recurrent_dropout else 0.0,
+                    return_sequences=True,
+                )
+            )
+        )
+        model.add(
+            Bidirectional(
+                LSTM(
+                    embedding_dim,
+                    dropout=args.dropout if args.dropout else 0.0,
+                    recurrent_dropout=args.recurrent_dropout if args.recurrent_dropout else 0.0,
+                )
+            )
+        )
+    else:
+        model.add(
+            LSTM(
+                embedding_dim,
+                dropout=args.dropout if args.dropout else 0.0,
+                recurrent_dropout=args.recurrent_dropout if args.recurrent_dropout else 0.0,
+            )
+        )
+
     # Ultimately, end with dense layer with softmax
     model.add(Dense(input_dim=embedding_dim, units=num_labels, activation="softmax"))
     # Compile model using our settings, check for accuracy
@@ -117,7 +172,7 @@ def train_model(model, X_train, Y_train, X_dev, Y_dev):
     # Potentially change these to cmd line args again
     # And yes, don't be afraid to experiment!
     verbose = 1
-    batch_size = 32
+    batch_size = 64
     epochs = 50
     # Early stopping: stop training when there are three consecutive epochs without improving
     # It's also possible to monitor the training loss with monitor="loss"
