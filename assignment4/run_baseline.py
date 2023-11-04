@@ -9,18 +9,20 @@ import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.pipeline import FeatureUnion, Pipeline
 from sklearn.svm import LinearSVC
-from helpers_baseline import (
+from helpers.helpers_baseline import (
     identity,
     identity_string,
     spacy_pos,
     setup_df,
-    read_corpus,
     check_balance,
     undersample,
+    test_performance
+)
+from helpers.helpers_general import (
+    read_corpus,
     lemmatize,
     stem,
-    remove_emojis,
-    test_performance
+    remove_emojis
 )
 
 def run_experiments(classifiers, vec, vec_name, X_train, Y_train, X_test, Y_test):
