@@ -26,11 +26,11 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Your program description here")
 
-    parser.add_argument("--train_file", default='/content/gdrive/MyDrive/AS4/train.tsv', help="Input file to learn from")
-    parser.add_argument("--dev_file", default='/content/gdrive/MyDrive/AS4/dev.tsv', help="Separate dev set to read in")
-    parser.add_argument("--test_file", default='/content/gdrive/MyDrive/AS4/test.tsv', help="If added, use trained model to predict on test set")
+    parser.add_argument("--train_file", default='data/train.tsv', help="Input file to learn from")
+    parser.add_argument("--dev_file", default='data/dev.tsv', help="Separate dev set to read in")
+    parser.add_argument("--test_file", default='data/test.tsv', help="If added, use trained model to predict on test set")
     parser.add_argument("--gpt_file", default=False, help="If added, use GPT generated data")
-    parser.add_argument("--result_dir", default='/content/gdrive/MyDrive/AS4/', help="Where to store results")
+    parser.add_argument("--result_dir", default='results/', help="Where to store results")
     parser.add_argument("--lemmatize", action="store_true", help="Lemmatize text")
     parser.add_argument("--stem", action="store_true", help="Stem text")
     parser.add_argument("--emoji_remove", action="store_true", help="Remove emojis from text")
