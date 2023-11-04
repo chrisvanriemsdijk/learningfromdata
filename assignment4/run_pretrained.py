@@ -3,7 +3,7 @@ from imblearn.under_sampling import RandomUnderSampler
 import numpy as np
 import random as python_random
 import tensorflow as tf
-from helpers_pretrained import (
+from helpers.helpers_pretrained import (
     read_gpt_corpus,
     generate_tokens,
     create_pretrained,
@@ -11,7 +11,7 @@ from helpers_pretrained import (
     train_pretrained,
     report_pretrained
 )
-from helpers_general import (
+from helpers.helpers_general import (
     read_corpus,
     lemmatize,
     stem,
