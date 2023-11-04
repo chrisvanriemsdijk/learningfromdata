@@ -4,44 +4,12 @@ import numpy as np
 import tensorflow as tf
 import argparse
 import os
-import json
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import spacy
-from nltk.stem import WordNetLemmatizer
-from nltk.stem.snowball import SnowballStemmer
-from scipy.sparse import csr_matrix
-from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.ensemble import RandomForestClassifier, VotingClassifier
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
-from sklearn.metrics import (
-    ConfusionMatrixDisplay,
-    accuracy_score,
-    classification_report,
-    confusion_matrix,
-    f1_score,
-    precision_score,
-    recall_score,
-)
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.neighbors import KNeighborsClassifier
+from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.pipeline import FeatureUnion, Pipeline
-from sklearn.svm import SVC, LinearSVC
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.utils import class_weight
-from sklearn.utils import resample
-from keras.models import Sequential
-from keras.layers import Dense, Embedding, LSTM, Bidirectional
-from keras.initializers import Constant
-from sklearn.metrics import accuracy_score
-from sklearn.preprocessing import LabelBinarizer
-from tensorflow.keras.optimizers.legacy import Adam
-from tensorflow.keras.layers import TextVectorization
-from nltk.corpus import stopwords
-import nltk
-import re
-from helpers import (
+from sklearn.svm import LinearSVC
+from helpers_baseline import (
     identity,
     identity_string,
     spacy_pos,

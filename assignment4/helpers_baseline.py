@@ -1,20 +1,9 @@
-import argparse
-import random as python_random
 import numpy as np
-import tensorflow as tf
-import argparse
 import os
-import json
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import spacy
-from nltk.stem import WordNetLemmatizer
-from nltk.stem.snowball import SnowballStemmer
-from scipy.sparse import csr_matrix
-from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.ensemble import RandomForestClassifier, VotingClassifier
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.metrics import (
     ConfusionMatrixDisplay,
     accuracy_score,
@@ -24,40 +13,11 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
 )
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.pipeline import FeatureUnion, Pipeline
-from sklearn.svm import SVC, LinearSVC
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.utils import class_weight
+from sklearn.pipeline import Pipeline
 from sklearn.utils import resample
-from keras.models import Sequential
-from keras.layers import Dense, Embedding, LSTM, Bidirectional
-from keras.initializers import Constant
 from sklearn.metrics import accuracy_score
-from sklearn.preprocessing import LabelBinarizer
-from tensorflow.keras.optimizers.legacy import Adam
-from tensorflow.keras.layers import TextVectorization
-from nltk.corpus import stopwords
-import nltk
-import re
 
-def read_corpus(corpus_file):
-    """
-    Read the file by the given file name and parse the necessary fields. Can use sentiment or topic classes.
-    @param corpus_file: File name of the corpus file (TSV format).
-    @return: documents (list of text) and labels (list of labels).
-    """
-    documents = []
-    labels = []
-    with open(corpus_file, encoding="utf-8") as in_file:
-        for line in in_file:
-            columns = line.strip().split('\t')  # Assuming columns are separated by tabs
-            tokens = columns[0].strip().split()
-            label = columns[1]
-            documents.append(tokens)
-            labels.append(label)
-    return documents, labels
+nlp = spacy.load("en_core_web_sm")
 
 # Dummy function that only returns the input, to be used in the count functions of sklearn
 def identity(inp):
@@ -222,7 +182,6 @@ def test_performance(Y_test, Y_pred, classes, name):
     # Append all results, to return, such that it can be analyzed
     return [
             name,
-            vec_name,
             acc,
             macro_precision,
             macro_recall,
@@ -268,76 +227,3 @@ def run_experiments(classifiers, vec, vec_name, X_train, Y_train, X_test, Y_test
 
         results.append(test_performance(Y_test, Y_pred, classifier.classes_, name))
     return results
-
-def lemmatize(x):
-    """
-    Lemmatizes the input, goes over each word in each data sample and lemmatizes the word
-    @param x: Data samples
-    @return: Lemmatized data samples
-    """
-    lemmatizer = WordNetLemmatizer()
-    new_docs = []
-    # Iterates all documents in a the given dataset
-    for doc in x:
-        # Iterates all words in the document and lemmatize
-        new_docs.append([lemmatizer.lemmatize(word) for word in doc])
-    return new_docs
-
-
-def stem(x):
-    """
-    Stems the input, goes over each word in each data sample and stems the word
-    @param x: Data samples
-    @return: Stemmed data samples
-    """
-    stemmer = SnowballStemmer("english")
-    new_docs = []
-    # Iterates all documents in the given dataset
-    for doc in x:
-        # Iterates all words in the document and stem
-        new_docs.append([stemmer.stem(word) for word in doc])
-    return new_docs
-
-def remove_stopwords(x):
-  stop_words = set(stopwords.words('english'))
-
-  new_docs = []
-  for doc in x:
-    new_docs.append([w for w in doc if not w.lower() in stop_words])
-
-  return new_docs
-
-def remove_stopwords(x):
-  stop_words = set(stopwords.words('english'))
-
-  new_docs = []
-  for doc in x:
-    new_docs.append([w for w in doc if not w.lower() in stop_words])
-
-  return new_docs
-
-def remove_emojis(x):
-  emoji = re.compile("["
-        u"\U0001F600-\U0001F64F"
-        u"\U0001F300-\U0001F5FF"
-        u"\U0001F680-\U0001F6FF"
-        u"\U0001F1E0-\U0001F1FF"
-        u"\U00002500-\U00002BEF"
-        u"\U00002702-\U000027B0"
-        u"\U000024C2-\U0001F251"
-        u"\U0001f926-\U0001f937"
-        u"\U00010000-\U0010ffff"
-        u"\u2640-\u2642"
-        u"\u2600-\u2B55"
-        u"\u200d"
-        u"\u23cf"
-        u"\u23e9"
-        u"\u231a"
-        u"\ufe0f"
-        u"\u3030"
-                      "]+", re.UNICODE)
-  new_docs = []
-  for doc in x:
-    new_docs.append([re.sub(emoji, '', w) for w in doc])
-
-  return new_docs
