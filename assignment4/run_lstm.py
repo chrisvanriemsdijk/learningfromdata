@@ -1,10 +1,6 @@
 import random as python_random
-import json
 import argparse
 import numpy as np
-from keras.initializers import Constant
-from sklearn.metrics import accuracy_score
-from sklearn.preprocessing import LabelBinarizer
 from tensorflow.keras.layers import TextVectorization
 import tensorflow as tf
 from helpers.helpers_general import read_corpus, lemmatize, stem, remove_emojis
@@ -57,13 +53,6 @@ if __name__ == "__main__":
         help="Percentage of dropout applied in the LSTM layers",
     )
     parser.add_argument(
-        "-rdo",
-        "--recurrent_dropout",
-        default=0.2,
-        type=float,
-        help="Percentage of recurrent dropout applied in the LSTM layers",
-    )
-    parser.add_argument(
         "-bi",
         "--bidirectional",
         action="store_true",
@@ -86,16 +75,16 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    #print("READING DATA")
+    # print("READING DATA")
     embeddings = read_embeddings(args.embeddings)
     X_train, Y_train = read_corpus(args.train_file)
     X_dev, Y_dev = read_corpus(args.dev_file)
 
-    X_train = [[' '.join(subarray)] for subarray in X_train]
-    X_dev = [[' '.join(subarray)] for subarray in X_dev]
+    X_train = [[" ".join(subarray)] for subarray in X_train]
+    X_dev = [[" ".join(subarray)] for subarray in X_dev]
 
     # Undersampling using RandomUnderSampler
-    undersample = RandomUnderSampler(sampling_strategy='majority')
+    undersample = RandomUnderSampler(sampling_strategy="majority")
     X_train, Y_train = undersample.fit_resample(X_train, Y_train)
 
     if args.lemmatize:
@@ -124,9 +113,8 @@ if __name__ == "__main__":
     voc = vectorizer.get_vocabulary()
     emb_matrix = get_emb_matrix(voc, embeddings)
 
-
     # Transform string labels to one-hot encodings
-    classes = ['OFF', 'NOT']
+    classes = ["OFF", "NOT"]
     Y_train_bin = np.zeros((len(Y_train), len(classes)))
     Y_dev_bin = np.zeros((len(Y_dev), len(classes)))
 
@@ -149,6 +137,7 @@ if __name__ == "__main__":
 
     if args.test_file:
         # Read in test set and vectorize
+        X_test, Y_test = read_corpus(args.test_file)
         X_test = [[" ".join(subarray)] for subarray in X_test]
         if args.lemmatize:
             X_test = lemmatize(X_test)
@@ -169,7 +158,3 @@ if __name__ == "__main__":
         X_test_vect = vectorizer(np.array([[s] for s in X_test])).numpy()
         # Finally do the predictions
         test_set_predict(model, X_test_vect, Y_test_bin, "test")
-
-
-
-    

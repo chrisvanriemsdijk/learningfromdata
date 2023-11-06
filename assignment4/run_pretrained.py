@@ -1,16 +1,15 @@
 import argparse
-from imblearn.under_sampling import RandomUnderSampler
-import numpy as np
 import random as python_random
+
+import numpy as np
 import tensorflow as tf
-from helpers.helpers_pretrained import (
-    generate_tokens,
-    create_pretrained,
-    test_pretrained,
-    train_pretrained,
-    report_pretrained,
-)
-from helpers.helpers_general import read_corpus, read_gpt_corpus, lemmatize, stem, remove_emojis
+from helpers.helpers_general import lemmatize, read_corpus, read_gpt_corpus, remove_emojis, stem
+from helpers.helpers_pretrained import create_pretrained, generate_tokens, report_pretrained
+from imblearn.under_sampling import RandomUnderSampler
+from transformers.models.auto import TFAutoModelForSequenceClassification
+
+from assignment4.helpers.helpers_pretrained import test_pretrained, train_pretrained
+
 
 """Main function to train and test neural network given arguments in the dictionary"""
 if __name__ == "__main__":
@@ -48,13 +47,10 @@ if __name__ == "__main__":
         # "GroNLP/hateBERT": True
     }
 
-    print("READING DATA")
     # Read in the data and embeddings
     X_train, Y_train = read_corpus(args.train_file)
-    print("FINISHED TRAINING READING")
     X_dev, Y_dev = read_corpus(args.dev_file)
     X_gpt, Y_gpt = read_gpt_corpus(args.gpt_file)
-    print("GOT DATA")
 
     X_train = [[" ".join(subarray)] for subarray in X_train]
     X_dev = [[" ".join(subarray)] for subarray in X_dev]
@@ -116,6 +112,8 @@ if __name__ == "__main__":
         # Test model
         test_pretrained(model, tokens_dev, Y_dev_bin)
 
+        model = TFAutoModelForSequenceClassification.from_pretrained("models/")
+
         # If test_file is given, test performance on the testset
         if args.test_file:
             # Read in test set and vectorize
@@ -146,4 +144,4 @@ if __name__ == "__main__":
         if args.gpt_file:
             tokens_gpt, _ = generate_tokens(lm, X_gpt, X_dev, args.seqlen)
 
-            test_pretrained(model, tokens_gpt, Y_gpt_bin)
+            report_pretrained(model, tokens_gpt, Y_gpt_bin, X_gpt, args.result_dir, model)

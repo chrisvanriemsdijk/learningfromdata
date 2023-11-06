@@ -1,15 +1,18 @@
 import argparse
+from typing import List
 import numpy as np
 from transformers import TFAutoModelForSequenceClassification, AutoTokenizer
 from helpers.helpers_general import read_corpus, remove_emojis, lemmatize, stem
 from sklearn.metrics import (
     accuracy_score,
     f1_score,
+    confusion_matrix,
 )
+import matplotlib.pyplot as plt
 
 
-def generate_tokens(lm, X):
-    """Given the pretrained model, generate tokens"""
+def generate_tokens(lm: str, X: List[str]):
+    """Given the pretrained tokenizer, generate tokens"""
 
     # Set sequence length
     sequence_length = 150
@@ -22,19 +25,102 @@ def generate_tokens(lm, X):
     return tokens
 
 
-def evaluate(model, tokens, Y_bin):
+def plot_confusion_matrix(conf_matrix, classes: List[str], result_dir: str, name: str):
+    """
+    Takes a confusion matrix and class names, computes confusion matrix
+    :param conf_matrix: Confusion matrix for dataset
+    :type conf_matrix: sklearn.ConfusionMatrix
+    :param classes: Classes available for confusion matrix (binary in this case)
+    :param result_dir: Directory to save confusion matrix to
+    :param name: Name of confusion matrix image
+    """
+
+    # Configure
+    plt.figure(figsize=(8, 6))
+    plt.imshow(conf_matrix, interpolation="nearest", cmap=plt.get_cmap("GnBu"))
+    plt.title("Confusion Matrix")
+    plt.colorbar()
+
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=45)
+    plt.yticks(tick_marks, classes)
+
+    # Create plot
+    fmt = "d"
+    thresh = conf_matrix.max() / 2.0
+    for i in range(conf_matrix.shape[0]):
+        for j in range(conf_matrix.shape[1]):
+            plt.text(
+                j,
+                i,
+                format(conf_matrix[i, j], fmt),
+                horizontalalignment="center",
+                color="white" if conf_matrix[i, j] > thresh else "black",
+            )
+
+    # Set labels
+    plt.ylabel("Gold label")
+    plt.xlabel("Predicted label")
+    plt.tight_layout()
+    plt.savefig(f"{result_dir}/confusion_{name}.png", dpi=300)
+
+
+def evaluate(model, tokens, Y_bin, X, output_file):
     """Calculates accuracy given the model, tokens and true labels"""
 
-    # Predict and get 'logits' (predicted label)
+    # Ptedict and get 'logits' (predicted label)
     Y_pred = model.predict(tokens)["logits"]
 
     # Transform to label
     Y_pred = np.argmax(Y_pred, axis=1)
     Y_gold = np.argmax(Y_bin, axis=1)
 
-    # Test and print performance
-    print("Accuracy on own {1} set: {0}".format(round(accuracy_score(Y_gold, Y_pred), 3), "custom"))
-    print("F1 score on own {1} set: {0}".format(round(f1_score(Y_gold, Y_pred), 3), "custom"))
+    # Set class names and compute confusion matrix
+    class_names = ["OFF", "NOT"]
+    conf_matrix = confusion_matrix(Y_gold, Y_pred)
+
+    # Plot confusion matrix
+    plot_confusion_matrix(conf_matrix, class_names, "data", "evaluate")
+    plt.show()
+
+    with open(output_file, "w") as f:
+        # Test and print performance
+        acc = round(accuracy_score(Y_gold, Y_pred), 3)
+        print("Accuracy on own {1} set: {0}".format(acc, "custom"))
+        f.write("Accuracy on own {1} set: {0}\n".format(acc, "custom"))
+
+        # F1 score
+        f1 = f1_score(Y_gold, Y_pred, average=None)
+        print("\nF1 score on own {0} set: {1}".format("custom", f1))
+        f.write("\nF1 score on own {0} set: {1}\n".format("custom", f1))
+
+        # Print wrong (10) predicted reviews
+        cnt = 0
+        print("\nWrong predicted on own {0} set:".format("custom"))
+        f.write("\nWrong predicted on own {0} set:\n".format("custom"))
+        print("gold | pred | review")
+        f.write("\ngold | pred | review\n")
+        for gold, pred, text in zip(Y_gold, Y_pred, X):
+            if gold != pred:
+                cnt += 1
+                print(class_names[gold], class_names[pred], text)
+                f.write(f"{class_names[gold]}, {class_names[pred]}, {text}\n")
+                if cnt == 10:
+                    break
+
+        # Print correct (10) predicted reviews
+        cnt = 0
+        print("\nCorrect predicted on own {0} set:".format("custom"))
+        f.write("\nCorrect predicted on own {0} set:".format("custom"))
+        print("gold | pred | review")
+        f.write("gold | pred | review")
+        for gold, pred, text in zip(Y_gold, Y_pred, X):
+            if gold == pred:
+                cnt += 1
+                print(class_names[gold], class_names[pred], text)
+                f.write(f"{class_names[gold]}, {class_names[pred]}, {text}\n")
+                if cnt == 10:
+                    break
 
 
 if __name__ == "__main__":
@@ -73,8 +159,7 @@ if __name__ == "__main__":
     num_labels = len(set(Y))
 
     model = TFAutoModelForSequenceClassification.from_pretrained("models", num_labels=num_labels)
-    print(model)
     # Get tokens
     tokens = generate_tokens("distilbert-base-uncased", X)
 
-    evaluate(model, tokens, Y_bin)
+    evaluate(model, tokens, Y_bin, X, args.output_file)
