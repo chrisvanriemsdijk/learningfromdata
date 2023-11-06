@@ -19,18 +19,21 @@ from sklearn.metrics import accuracy_score
 
 nlp = spacy.load("en_core_web_sm")
 
+
 # Dummy function that only returns the input, to be used in the count functions of sklearn
 def identity(inp):
     return inp
 
+
 def identity_string(inp):
-  """
-  SpaCy can only extract the POS tags of words and not lists, therefore we need to use this function
-  that joins the whole input.
-  @param inp: List of words
-  @return: Concatenated string of words with spaces.
-  """
-  return " ".join(inp)
+    """
+    SpaCy can only extract the POS tags of words and not lists, therefore we need to use this function
+    that joins the whole input.
+    @param inp: List of words
+    @return: Concatenated string of words with spaces.
+    """
+    return " ".join(inp)
+
 
 def spacy_pos(txt):
     """
@@ -39,6 +42,7 @@ def spacy_pos(txt):
     @return: list: POS tag of each word from `txt`
     """
     return [token.pos_ for token in nlp(txt)]
+
 
 def get_scores(key: str, report_dict):
     """
@@ -61,9 +65,7 @@ def save_confusion_matrix(Y_test, Y_pred, classes, name):
     """
     cm = confusion_matrix(Y_test, Y_pred)
     # Plot the confusion matrix, given the confusion matrix and the classifier classes
-    disp = ConfusionMatrixDisplay(
-        confusion_matrix=cm, display_labels=classes
-    )
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=classes)
     disp.plot()
     disp.ax_.set_title(name)
     # Save the plot cm (confusion matrix) directory
@@ -73,38 +75,40 @@ def save_confusion_matrix(Y_test, Y_pred, classes, name):
     disp.figure_.savefig(f"cm/{name}.png", dpi=300)
     print(f"Confusion matrix of classifier {name} is saved to cm/{name}.png")
 
+
 def undersample(X_train, Y_train):
-  # Split the data into arrays, one for each class
-  X_train = np.array(X_train)
-  Y_train = np.array(Y_train)
-  Y_indices_off = np.where(Y_train == 'OFF')[0]
-  Y_indices_not = np.where(Y_train == 'NOT')[0]
-  X_off = X_train[Y_indices_off]
-  X_not = X_train[Y_indices_not]
+    # Split the data into arrays, one for each class
+    X_train = np.array(X_train, dtype="object")
+    Y_train = np.array(Y_train)
+    Y_indices_off = np.where(Y_train == "OFF")[0]
+    Y_indices_not = np.where(Y_train == "NOT")[0]
+    X_off = X_train[Y_indices_off]
+    X_not = X_train[Y_indices_not]
 
-  # Determine the size of the smaller class
-  min_size = min(len(X_off), len(X_not))
+    # Determine the size of the smaller class
+    min_size = min(len(X_off), len(X_not))
 
-  # Random seed for reproducibility
-  random_seed = 42
+    # Random seed for reproducibility
+    random_seed = 42
 
-  # Undersample both classes to match the size of the smaller class
-  X_off_undersampled = resample(X_off, replace=False, n_samples=min_size, random_state=random_seed)
-  X_not_undersampled = resample(X_not, replace=False, n_samples=min_size, random_state=random_seed)
+    # Undersample both classes to match the size of the smaller class
+    X_off_undersampled = resample(X_off, replace=False, n_samples=min_size, random_state=random_seed)
+    X_not_undersampled = resample(X_not, replace=False, n_samples=min_size, random_state=random_seed)
 
-  # Combine the undersampled data from both classes
-  X_final = np.concatenate([X_off_undersampled,X_not_undersampled])
+    # Combine the undersampled data from both classes
+    X_final = np.concatenate([X_off_undersampled, X_not_undersampled])
 
-  # Create corresponding labels for the undersampled data
-  Y_final = ['OFF'] * min_size + ['NOT'] * min_size
-  Y_final = np.array(Y_final)
+    # Create corresponding labels for the undersampled data
+    Y_final = ["OFF"] * min_size + ["NOT"] * min_size
+    Y_final = np.array(Y_final)
 
-  # Shuffle the data and labels
-  shuffle_indices = np.random.permutation(len(X_final))
-  X_final = X_final[shuffle_indices]
-  Y_final = Y_final[shuffle_indices]
+    # Shuffle the data and labels
+    shuffle_indices = np.random.permutation(len(X_final))
+    X_final = X_final[shuffle_indices]
+    Y_final = Y_final[shuffle_indices]
 
-  return X_final, Y_final
+    return X_final, Y_final
+
 
 def setup_df():
     """
@@ -115,7 +119,6 @@ def setup_df():
     return pd.DataFrame(
         {
             "classifier": [],
-            "vectorizer": [],
             "accuracy": [],
             "macro_precision": [],
             "macro_recall": [],
@@ -128,6 +131,7 @@ def setup_df():
             "off_f1": [],
         }
     )
+
 
 def check_balance(y):
     """
@@ -150,9 +154,10 @@ def check_balance(y):
 
     # Add text labels at the end of each bar
     for label, value in zip(labels, values):
-        plt.text(label, value, str(value), ha='center', va='bottom')
+        plt.text(label, value, str(value), ha="center", va="bottom")
 
     plt.show()
+
 
 def test_performance(Y_test, Y_pred, classes, name):
     # Get the performance metrics.
@@ -180,19 +185,8 @@ def test_performance(Y_test, Y_pred, classes, name):
     c_p, c_r, c_f1, _ = get_scores("OFF", report_dict)
 
     # Append all results, to return, such that it can be analyzed
-    return [
-            name,
-            acc,
-            macro_precision,
-            macro_recall,
-            macro_f1,
-            b_p,
-            b_r,
-            b_f1,
-            c_p,
-            c_r,
-            c_f1
-        ]
+    return [name, acc, macro_precision, macro_recall, macro_f1, b_p, b_r, b_f1, c_p, c_r, c_f1]
+
 
 def run_experiments(classifiers, vec, vec_name, X_train, Y_train, X_test, Y_test):
     """

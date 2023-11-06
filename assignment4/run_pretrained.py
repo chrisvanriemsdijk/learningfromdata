@@ -4,21 +4,15 @@ import numpy as np
 import random as python_random
 import tensorflow as tf
 from helpers.helpers_pretrained import (
-    read_gpt_corpus,
     generate_tokens,
     create_pretrained,
     test_pretrained,
     train_pretrained,
-    report_pretrained
+    report_pretrained,
 )
-from helpers.helpers_general import (
-    read_corpus,
-    lemmatize,
-    stem,
-    remove_emojis
-)
+from helpers.helpers_general import read_corpus, read_gpt_corpus, lemmatize, stem, remove_emojis
 
-'''Main function to train and test neural network given arguments in the dictionary'''
+"""Main function to train and test neural network given arguments in the dictionary"""
 if __name__ == "__main__":
     np.random.seed(1234)
     tf.random.set_seed(1234)
@@ -26,11 +20,13 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Your program description here")
 
-    parser.add_argument("--train_file", default='data/train.tsv', help="Input file to learn from")
-    parser.add_argument("--dev_file", default='data/dev.tsv', help="Separate dev set to read in")
-    parser.add_argument("--test_file", default='data/test.tsv', help="If added, use trained model to predict on test set")
-    parser.add_argument("--gpt_file", default=False, help="If added, use GPT generated data")
-    parser.add_argument("--result_dir", default='results/', help="Where to store results")
+    parser.add_argument("--train_file", default="data/train.tsv", help="Input file to learn from")
+    parser.add_argument("--dev_file", default="data/dev.tsv", help="Separate dev set to read in")
+    parser.add_argument(
+        "--test_file", default="data/test.tsv", help="If added, use trained model to predict on test set"
+    )
+    parser.add_argument("--gpt_file", default="data/GPT.csv", help="If added, use GPT generated data")
+    parser.add_argument("--result_dir", default="results/", help="Where to store results")
     parser.add_argument("--lemmatize", action="store_true", help="Lemmatize text")
     parser.add_argument("--stem", action="store_true", help="Stem text")
     parser.add_argument("--emoji_remove", action="store_true", help="Remove emojis from text")
@@ -47,17 +43,20 @@ if __name__ == "__main__":
         # "GroNLP/hateBERT": True
     }
 
+    print("READING DATA")
     # Read in the data and embeddings
     X_train, Y_train = read_corpus(args.train_file)
+    print("FINISHED TRAINING READING")
     X_dev, Y_dev = read_corpus(args.dev_file)
     X_gpt, Y_gpt = read_gpt_corpus(args.gpt_file)
+    print("GOT DATA")
 
-    X_train = [[' '.join(subarray)] for subarray in X_train]
-    X_dev = [[' '.join(subarray)] for subarray in X_dev]
-    X_gpt = [[' '.join(subarray)] for subarray in X_gpt]
+    X_train = [[" ".join(subarray)] for subarray in X_train]
+    X_dev = [[" ".join(subarray)] for subarray in X_dev]
+    X_gpt = [[" ".join(subarray)] for subarray in X_gpt]
     # Undersampling using RandomUnderSampler
 
-    undersample = RandomUnderSampler(sampling_strategy='majority')
+    undersample = RandomUnderSampler(sampling_strategy="majority")
     X_train, Y_train = undersample.fit_resample(X_train, Y_train)
 
     if args.lemmatize:
@@ -80,7 +79,7 @@ if __name__ == "__main__":
     X_gpt = [text for sublist in X_gpt for text in sublist]
 
     # Transform string labels to one-hot encodings
-    classes = ['OFF', 'NOT']
+    classes = ["OFF", "NOT"]
     Y_train_bin = np.zeros((len(Y_train), len(classes)))
     Y_dev_bin = np.zeros((len(Y_dev), len(classes)))
     Y_gpt_bin = np.zeros((len(Y_gpt), len(classes)))
@@ -114,10 +113,9 @@ if __name__ == "__main__":
 
         # If test_file is given, test performance on the testset
         if args.test_file:
-
             # Read in test set and vectorize
             X_test, Y_test = read_corpus(args.test_file)
-            X_test = [[' '.join(subarray)] for subarray in X_test]
+            X_test = [[" ".join(subarray)] for subarray in X_test]
             if args.lemmatize:
                 X_test = lemmatize(X_test)
 
