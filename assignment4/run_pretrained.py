@@ -139,7 +139,6 @@ if __name__ == "__main__":
             report_pretrained(model, tokens_test, Y_test_bin, X_test)
 
         if args.gpt_file:
-            print('MOOI')
             tokens_gpt, _ = generate_tokens(lm, X_gpt, X_dev)
 
             test_pretrained(model, tokens_gpt, Y_gpt_bin)
