@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # If testing on all models, use this dict
+    # If testing on all models, use this dict. Indicates whether it concerns a pytorch model
     # Comment out models if you want to test specific models
     pretrained = {
         # "bert-base-uncased": False,
@@ -53,9 +53,9 @@ if __name__ == "__main__":
 
     X_train = [[" ".join(subarray)] for subarray in X_train]
     X_dev = [[" ".join(subarray)] for subarray in X_dev]
-    X_gpt = [[" ".join(subarray)] for subarray in X_gpt]
-    # Undersampling using RandomUnderSampler
+    X_gpt = [[" ".join(subarray).strip('""')] for subarray in X_gpt]
 
+    # Undersampling using RandomUnderSampler
     undersample = RandomUnderSampler(sampling_strategy="majority")
     X_train, Y_train = undersample.fit_resample(X_train, Y_train)
 
@@ -139,6 +139,7 @@ if __name__ == "__main__":
             report_pretrained(model, tokens_test, Y_test_bin, X_test)
 
         if args.gpt_file:
+            print('MOOI')
             tokens_gpt, _ = generate_tokens(lm, X_gpt, X_dev)
 
             test_pretrained(model, tokens_gpt, Y_gpt_bin)
