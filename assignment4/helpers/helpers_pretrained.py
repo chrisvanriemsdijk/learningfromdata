@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
@@ -84,8 +85,12 @@ def test_pretrained(model, tokens_dev, Y_dev_bin):
   print('Accuracy on own {1} set: {0}'.format(round(accuracy_score(Y_gold, Y_pred), 3), "dev"))
   print('F1 score on own {1} set: {0}'.format(round(f1_score(Y_gold, Y_pred), 3), "dev"))
 
-def report_pretrained(model, tokens_test, Y_test_bin, X_text):
+def report_pretrained(model, tokens_test, Y_test_bin, X_text, result_dir, name):
   '''Calculates scores given the model, tokens and true labels'''
+
+
+
+  results_file = os.path.join(result_dir, f"results{name}.txt")
 
   # Predict and get 'logits' (predicted label)
   Y_pred = model.predict(tokens_test)["logits"]
@@ -94,10 +99,6 @@ def report_pretrained(model, tokens_test, Y_test_bin, X_text):
   Y_pred = np.argmax(Y_pred, axis=1)
   Y_gold = np.argmax(Y_test_bin, axis=1)
 
-  # Test and print performance
-  print('Accuracy on own {1} set: {0}'.format(round(accuracy_score(Y_gold, Y_pred), 3), "test"))
-  print(Y_pred)
-
   # Create confusion matrix
   print('Confusion matrix on own {0} set:'.format("test"))
 
@@ -105,37 +106,50 @@ def report_pretrained(model, tokens_test, Y_test_bin, X_text):
   class_names = ["OFF", "NOT"]
   conf_matrix = confusion_matrix(Y_gold, Y_pred)
 
-  # F1 score
-  print('F1 score on own {0} set:'.format("test"))
-  print(f1_score(Y_gold, Y_pred, average=None))
-
   # Plot confusion matrix
-  plot_confusion_matrix(conf_matrix, classes=class_names)
+  plot_confusion_matrix(conf_matrix, class_names, result_dir)
   plt.show()
 
-  # Print wrong (10) predicted reviews
-  cnt = 0
-  print('\nWrong predicted on own {0} set:'.format("test"))
-  print('gold | pred | review')
-  for gold, pred, text in zip(Y_gold, Y_pred, X_text):
-    if gold != pred:
-      cnt += 1
-      print(class_names[gold], class_names[pred], text)
-      if cnt == 10:
-        break
+  with open(results_file, "w") as f:
+    # Test and print performance
+    acc = round(accuracy_score(Y_gold, Y_pred), 3)
+    print('Accuracy on own {1} set: {0}'.format(acc, "test"))
+    f.write('Accuracy on own {1} set: {0}'.format(acc, "test"))
 
-  # Print correct (10) predicted reviews
-  cnt = 0
-  print('\nCorrect predicted on own {0} set:'.format("test"))
-  print('gold | pred | review')
-  for gold, pred, text in zip(Y_gold, Y_pred, X_text):
-    if gold == pred:
-      cnt += 1
-      print(class_names[gold], class_names[pred], text)
-      if cnt == 10:
-        break
+    # F1 score
+    f1 = f1_score(Y_gold, Y_pred, average=None)
+    print('F1 score on own {0} set: {1}'.format("test", f1))
+    f.write('F1 score on own {0} set: {1}'.format("test", f1))
 
-def plot_confusion_matrix(conf_matrix, classes):
+    # Print wrong (10) predicted reviews
+    cnt = 0
+    print('\nWrong predicted on own {0} set:'.format("test"))
+    f.write('\nWrong predicted on own {0} set:'.format("test"))
+    print('gold | pred | review')
+    f.write('gold | pred | review')
+    for gold, pred, text in zip(Y_gold, Y_pred, X_text):
+      if gold != pred:
+        cnt += 1
+        print(class_names[gold], class_names[pred], text)
+        f.write(class_names[gold], class_names[pred], text)
+        if cnt == 10:
+          break
+
+    # Print correct (10) predicted reviews
+    cnt = 0
+    print('\nCorrect predicted on own {0} set:'.format("test"))
+    f.write('\nCorrect predicted on own {0} set:'.format("test"))
+    print('gold | pred | review')
+    f.write('gold | pred | review')
+    for gold, pred, text in zip(Y_gold, Y_pred, X_text):
+      if gold == pred:
+        cnt += 1
+        print(class_names[gold], class_names[pred], text)
+        f.write(class_names[gold], class_names[pred], text)
+        if cnt == 10:
+          break
+
+def plot_confusion_matrix(conf_matrix, classes, result_dir, name):
     '''Takes a confusion matrix and class names, computes confusion matrix'''
 
     # Configure
@@ -161,3 +175,4 @@ def plot_confusion_matrix(conf_matrix, classes):
     plt.ylabel('Gold label')
     plt.xlabel('Predicted label')
     plt.tight_layout()
+    plt.figure_.savefig(f"{result_dir}/confusion_{name}.png", dpi=300)
