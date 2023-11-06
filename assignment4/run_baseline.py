@@ -7,7 +7,8 @@ import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.pipeline import FeatureUnion, Pipeline
-from sklearn.svm import LinearSVC
+from sklearn.svm import LinearSVC, SVC
+from sklearn.neighbors import KNeighborsClassifier
 from helpers.helpers_baseline import (
     identity,
     identity_string,
@@ -87,24 +88,24 @@ def run_range(rangestart, rangeend):
     # Use the KNN classifier experiments
     # Init all tested KNN & SVM models
     classifiers = [
-        # ("KNN 3", KNeighborsClassifier(3)),
-        # ("KNN 5", KNeighborsClassifier()),
-        # ("KNN 8", KNeighborsClassifier(8)),
-        # ("KNN 3 Weighted", KNeighborsClassifier(3, weights="distance")),
-        # ("KNN 5 Weighted", KNeighborsClassifier(weights="distance")),
-        # ("KNN 8 Weighted", KNeighborsClassifier(8, weights="distance")),
-        # ("LinearSVM C = 0.5", LinearSVC(C=0.5)),
-        # ("LinearSVM C = 0.75", LinearSVC(C=0.75)),
-        # ("LinearSVM C = 1", LinearSVC()),
-        # ("LinearSVM C = 1.25", LinearSVC(C=1.25)),
+        ("KNN 3", KNeighborsClassifier(3)),
+        ("KNN 5", KNeighborsClassifier()),
+        ("KNN 8", KNeighborsClassifier(8)),
+        ("KNN 3 Weighted", KNeighborsClassifier(3, weights="distance")),
+        ("KNN 5 Weighted", KNeighborsClassifier(weights="distance")),
+        ("KNN 8 Weighted", KNeighborsClassifier(8, weights="distance")),
+        ("LinearSVM C = 0.5", LinearSVC(C=0.5)),
+        ("LinearSVM C = 0.75", LinearSVC(C=0.75)),
+        ("LinearSVM C = 1", LinearSVC()),
+        ("LinearSVM C = 1.25", LinearSVC(C=1.25)),
         ("LinearSVM C = 1.5", LinearSVC(C=1.5)),
-        # ("LinearSVM C = 2", LinearSVC(C=2)),
-        # ("LinearSVM C = 3", LinearSVC(C=3)),
-        # ("LinearSVM C = 10", LinearSVC(C=10)),
-        # ("LinearSVM C = 100", LinearSVC(C=100)),
-        # ("SVC C=0.5", SVC(C=0.5)),
-        # ("SVC C=1", SVC()),
-        # ("SVC C=1.5", SVC(C=1.5)),
+        ("LinearSVM C = 2", LinearSVC(C=2)),
+        ("LinearSVM C = 3", LinearSVC(C=3)),
+        ("LinearSVM C = 10", LinearSVC(C=10)),
+        ("LinearSVM C = 100", LinearSVC(C=100)),
+        ("SVC C=0.5", SVC(C=0.5)),
+        ("SVC C=1", SVC()),
+        ("SVC C=1.5", SVC(C=1.5)),
     ]
 
     # Setup dataframe to store the results
