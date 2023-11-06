@@ -70,13 +70,6 @@ if __name__ == "__main__":
         help="Implement bidirectional LSTM",
     )
     parser.add_argument(
-        "-rdo",
-        "--recurrent_dropout",
-        default=0.2,
-        type=float,
-        help="Percentage of recurrent dropout applied in the LSTM layers",
-    )
-    parser.add_argument(
         "-lr",
         "--learning_rate",
         default=0.0005,
@@ -110,12 +103,12 @@ if __name__ == "__main__":
         X_train = lemmatize(X_train)
 
     if args.stem:
-    X_dev = stem(X_dev)
-    X_train = stem(X_train)
+        X_dev = stem(X_dev)
+        X_train = stem(X_train)
 
     if args.emoji_remove:
-    X_dev = remove_emojis(X_dev)
-    X_train = remove_emojis(X_train)
+        X_dev = remove_emojis(X_dev)
+        X_train = remove_emojis(X_train)
 
     X_train = [text for sublist in X_train for text in sublist]
     X_dev = [text for sublist in X_dev for text in sublist]
@@ -139,10 +132,10 @@ if __name__ == "__main__":
 
     # Loop through the labels and set the corresponding class to 1
     for i, label in enumerate(Y_train):
-    Y_train_bin[i, classes.index(label)] = 1
+        Y_train_bin[i, classes.index(label)] = 1
 
     for i, label in enumerate(Y_dev):
-    Y_dev_bin[i, classes.index(label)] = 1
+        Y_dev_bin[i, classes.index(label)] = 1
 
     # Create model
     model = create_model(Y_train, emb_matrix, args)
