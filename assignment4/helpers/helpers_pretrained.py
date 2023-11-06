@@ -13,11 +13,8 @@ from tensorflow.keras.losses import BinaryCrossentropy
 from transformers import AutoTokenizer
 from transformers import TFAutoModelForSequenceClassification
 
-def generate_tokens(lm, X_train, X_dev):
+def generate_tokens(lm, X_train, X_dev, sequence_length):
   '''Given the pretrained model, generate tokens'''
-
-  # Set sequence length
-  sequence_length = 150
 
   # Load pretrained tokenizer
   tokenizer = AutoTokenizer.from_pretrained(lm)
@@ -29,15 +26,13 @@ def generate_tokens(lm, X_train, X_dev):
     truncation=True, return_tensors="np").data
   return tokens_train, tokens_dev
 
-def create_pretrained(lm, num_labels, pt):
+def create_pretrained(lm, num_labels, pt, start_learning_rate, end_learning_rate):
   '''Given the pretrained model, return compiled model'''
 
   # Set polynomial decay
-  starter_learning_rate = 5e-5
-  end_learning_rate = 1e-6
   decay_steps = 10000
   learning_rate_fn = tf.keras.optimizers.schedules.PolynomialDecay(
-    starter_learning_rate,
+    start_learning_rate,
     decay_steps,
     end_learning_rate,
     power=0.5)
@@ -52,12 +47,8 @@ def create_pretrained(lm, num_labels, pt):
   model.compile(loss=loss_function, optimizer=optim, metrics=['accuracy'])
   return model
 
-def train_pretrained(model, tokens_train, Y_train_bin, tokens_dev, Y_dev_bin):
+def train_pretrained(model, tokens_train, Y_train_bin, tokens_dev, Y_dev_bin, ep, batch):
   '''Given the compiled model, return a trained model'''
-
-  # Set number of epochs and batch size
-  ep = 5
-  batch = 8
 
   # Train model
   model.fit(tokens_train, Y_train_bin, verbose=1, epochs=ep,

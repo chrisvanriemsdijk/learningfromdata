@@ -30,6 +30,11 @@ if __name__ == "__main__":
     parser.add_argument("--lemmatize", action="store_true", help="Lemmatize text")
     parser.add_argument("--stem", action="store_true", help="Stem text")
     parser.add_argument("--emoji_remove", action="store_true", help="Remove emojis from text")
+    parser.add_argument("--epochs", default=5, help="Set number of epochs")
+    parser.add_argument("--batch", default=8, help="Set batch size")
+    parser.add_argument("--startrate", default=5e-5, help="Set start of polynomnial learning rate")
+    parser.add_argument("--endrate", default=1e-6, help="Set end of polynomial learning rate")
+    parser.add_argument("--seqlen", default=100, help="Set sequence length")
 
     args = parser.parse_args()
 
@@ -100,13 +105,13 @@ if __name__ == "__main__":
         num_labels = len(set(Y_train))
 
         # Get tokens
-        tokens_train, tokens_dev = generate_tokens(lm, X_train, X_dev)
+        tokens_train, tokens_dev = generate_tokens(lm, X_train, X_dev, args.seqlen)
 
         # Create model
-        model = create_pretrained(lm, num_labels, pretrained[model])
+        model = create_pretrained(lm, num_labels, pretrained[model], args.startrate, args.endrate)
 
         # Train model
-        model = train_pretrained(model, tokens_train, Y_train_bin, tokens_dev, Y_dev_bin)
+        model = train_pretrained(model, tokens_train, Y_train_bin, tokens_dev, Y_dev_bin, args.epochs, args.batch)
 
         # Test model
         test_pretrained(model, tokens_dev, Y_dev_bin)
@@ -133,12 +138,12 @@ if __name__ == "__main__":
             for i, label in enumerate(Y_test):
                 Y_test_bin[i, classes.index(label)] = 1
 
-            tokens_test, tokens_dev = generate_tokens(lm, X_test, X_dev)
+            tokens_test, tokens_dev = generate_tokens(lm, X_test, X_dev, args.seqlen)
 
             # Finally do the predictions
             report_pretrained(model, tokens_test, Y_test_bin, X_test)
 
         if args.gpt_file:
-            tokens_gpt, _ = generate_tokens(lm, X_gpt, X_dev)
+            tokens_gpt, _ = generate_tokens(lm, X_gpt, X_dev, args.seqlen)
 
             test_pretrained(model, tokens_gpt, Y_gpt_bin)
