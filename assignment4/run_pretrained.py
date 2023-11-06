@@ -30,11 +30,11 @@ if __name__ == "__main__":
     parser.add_argument("--lemmatize", action="store_true", help="Lemmatize text")
     parser.add_argument("--stem", action="store_true", help="Stem text")
     parser.add_argument("--emoji_remove", action="store_true", help="Remove emojis from text")
-    parser.add_argument("--epochs", default=5, help="Set number of epochs")
-    parser.add_argument("--batch", default=8, help="Set batch size")
-    parser.add_argument("--startrate", default=5e-5, help="Set start of polynomnial learning rate")
-    parser.add_argument("--endrate", default=1e-6, help="Set end of polynomial learning rate")
-    parser.add_argument("--seqlen", default=100, help="Set sequence length")
+    parser.add_argument("--epochs", type=int, default=5, help="Set number of epochs")
+    parser.add_argument("--batch", type=int, default=8, help="Set batch size")
+    parser.add_argument("--startrate", type=int, default=5e-5, help="Set start of polynomnial learning rate")
+    parser.add_argument("--endrate", type=int, default=1e-6, help="Set end of polynomial learning rate")
+    parser.add_argument("--seqlen", type=int, default=100, help="Set sequence length")
 
     args = parser.parse_args()
 
@@ -141,7 +141,7 @@ if __name__ == "__main__":
             tokens_test, tokens_dev = generate_tokens(lm, X_test, X_dev, args.seqlen)
 
             # Finally do the predictions
-            report_pretrained(model, tokens_test, Y_test_bin, X_test)
+            report_pretrained(model, tokens_test, Y_test_bin, X_test, args.result_dir, model)
 
         if args.gpt_file:
             tokens_gpt, _ = generate_tokens(lm, X_gpt, X_dev, args.seqlen)
